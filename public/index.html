@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab Inventory Management System</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.8.0/dist/web3.min.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🔬 Lab Inventory Management System</h1>
+            <div id="wallet-info">
+                <button id="connect-wallet">Connect MetaMask</button>
+                <span id="account-address"></span>
+            </div>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-button active" onclick="showTab('inventory')">📦 Inventory</button>
+            <button class="tab-button" onclick="showTab('borrow')">📝 Peminjaman</button>
+            <button class="tab-button" onclick="showTab('history')">📊 History</button>
+            <button class="tab-button" onclick="showTab('admin')">⚙️ Admin</button>
+        </nav>
+
+        <!-- Inventory Tab -->
+        <div id="inventory" class="tab-content active">
+            <h2>Daftar Inventaris</h2>
+            <div class="filter-section">
+                <input type="text" id="search-items" placeholder="Cari item...">
+                <select id="filter-category">
+                    <option value="">Semua Kategori</option>
+                    <option value="Microcontroller">Microcontroller</option>
+                    <option value="Single Board Computer">Single Board Computer</option>
+                    <option value="Prototyping">Prototyping</option>
+                </select>
+                <label>
+                    <input type="checkbox" id="show-available-only"> Hanya yang tersedia
+                </label>
+            </div>
+            <div id="items-container"></div>
+        </div>
+
+        <!-- Borrow Tab -->
+        <div id="borrow" class="tab-content">
+            <h2>Peminjaman Saya</h2>
+            <div id="my-borrows-container"></div>
+        </div>
+
+        <!-- History Tab -->
+        <div id="history" class="tab-content">
+            <h2>History Peminjaman</h2>
+            <div id="history-container"></div>
+        </div>
+
+        <!-- Admin Tab -->
+        <div id="admin" class="tab-content">
+            <h2>Admin Panel</h2>
+            <div class="admin-section">
+                <h3>Tambah Item Baru</h3>
+                <form id="add-item-form">
+                    <input type="text" id="item-name" placeholder="Nama Item" required>
+                    <input type="text" id="item-category" placeholder="Kategori" required>
+                    <textarea id="item-description" placeholder="Deskripsi" required></textarea>
+                    <input type="text" id="item-location" placeholder="Lokasi" required>
+                    <button type="submit">Tambah Item</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Borrow Modal -->
+    <div id="borrow-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Pinjam Item</h3>
+            <form id="borrow-form">
+                <input type="hidden" id="borrow-item-id">
+                <input type="text" id="borrower-name" placeholder="Nama Peminjam" required>
+                <textarea id="borrow-purpose" placeholder="Tujuan Peminjaman" required></textarea>
+                <button type="submit">Pinjam</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
