@@ -8,7 +8,7 @@ module.exports = {
       url: "http://127.0.0.1:7545",
       accounts: [
         // Masukkan private key dari Ganache
-        "0xdd9ff8a4c2218755cae28d7cdf8f857e08d862a519984588fb5f9333910cb403"
+        "0xbdf132d717c8f9ad8aef05bcc53e34d6a6c049e889e484b6f4145533b21e17c2"
       ]
     }
   }

@@ -1,7 +1,7 @@
 // Contract ABI dan Address (akan diisi setelah deploy)
-const CONTRACT_ADDRESS = '0x90c903228d1eD14Eae11eC4F252646c5C7E00986';
-const CONTRACT_ABI =  [
-    {
+const CONTRACT_ADDRESS = '0x230BEc35EfD3731aa058C44b37DbB0574e644d60';
+const CONTRACT_ABI = [
+   {
       "inputs": [],
       "stateMutability": "nonpayable",
       "type": "constructor"
@@ -647,7 +647,7 @@ const CONTRACT_ABI =  [
       "stateMutability": "view",
       "type": "function"
     }
-  ]; // Akan diisi dengan ABI dari artifacts
+]// Akan diisi dengan ABI dari artifacts
 
 let web3;
 let contract;
