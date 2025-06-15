@@ -10,191 +10,177 @@ contract LabInventory is Ownable, ReentrancyGuard {
         string name;
         string category;
         string description;
-        bool isAvailable;
-        address currentBorrower;
-        uint256 borrowTimestamp;
         string location;
+        uint256 totalQuantity; // Jumlah total item yang ada
+        uint256 availableQuantity; // Jumlah yang tersedia untuk dipinjam
     }
 
     struct BorrowRecord {
+        uint256 recordId;
         uint256 itemId;
         address borrower;
+        string borrowerName;
+        string purpose;
         uint256 borrowTime;
         uint256 returnTime;
         bool isReturned;
-        string borrowerName;
-        string purpose;
     }
+
+    uint256 public nextItemId;
+    uint256 public nextRecordId;
 
     mapping(uint256 => Item) public items;
     mapping(uint256 => BorrowRecord[]) public itemBorrowHistory;
-    mapping(address => uint256[]) public userBorrowedItems;
 
-    uint256 public nextItemId = 1;
-    uint256 public totalItems = 0;
+    // Mapping untuk melacak berapa banyak unit item yang dipinjam oleh user
+    // userAddress => itemId => count
+    mapping(address => mapping(uint256 => uint256)) public userBorrowedCount;
 
-    event ItemAdded(uint256 indexed itemId, string name, string category);
+    event ItemAdded(uint256 indexed itemId, string name, uint256 quantity);
     event ItemBorrowed(
+        uint256 indexed recordId,
         uint256 indexed itemId,
-        address indexed borrower,
+        address borrower,
         string borrowerName
     );
-    event ItemReturned(uint256 indexed itemId, address indexed borrower);
-    event ItemUpdated(uint256 indexed itemId, string name, string category);
+    event ItemReturned(
+        uint256 indexed recordId,
+        uint256 indexed itemId,
+        address borrower
+    );
 
-    constructor() Ownable(msg.sender) {}
+    constructor() Ownable(msg.sender) {
+        nextItemId = 1;
+        nextRecordId = 1;
+    }
 
-    // Add new item to inventory
     function addItem(
         string memory _name,
         string memory _category,
         string memory _description,
-        string memory _location
+        string memory _location,
+        uint256 _quantity
     ) public onlyOwner {
-        items[nextItemId] = Item({
-            id: nextItemId,
-            name: _name,
-            category: _category,
-            description: _description,
-            isAvailable: true,
-            currentBorrower: address(0),
-            borrowTimestamp: 0,
-            location: _location
-        });
-
-        totalItems++;
-        emit ItemAdded(nextItemId, _name, _category);
+        require(_quantity > 0, "Quantity must be greater than 0");
+        items[nextItemId] = Item(
+            nextItemId,
+            _name,
+            _category,
+            _description,
+            _location,
+            _quantity,
+            _quantity // Awalnya, jumlah tersedia = jumlah total
+        );
+        emit ItemAdded(nextItemId, _name, _quantity);
         nextItemId++;
     }
 
-    // Borrow an item
     function borrowItem(
         uint256 _itemId,
         string memory _borrowerName,
         string memory _purpose
     ) public nonReentrant {
-        require(_itemId < nextItemId && _itemId > 0, "Item tidak ditemukan");
-        require(items[_itemId].isAvailable, "Item sedang dipinjam");
+        require(_itemId > 0 && _itemId < nextItemId, "Item does not exist");
+        Item storage item = items[_itemId];
+        require(item.availableQuantity > 0, "Item not available");
 
-        items[_itemId].isAvailable = false;
-        items[_itemId].currentBorrower = msg.sender;
-        items[_itemId].borrowTimestamp = block.timestamp;
+        // Kurangi jumlah yang tersedia dan catat peminjaman user
+        item.availableQuantity--;
+        userBorrowedCount[msg.sender][_itemId]++;
 
-        // Add to borrow history
+        // Tambahkan ke histori peminjaman
         itemBorrowHistory[_itemId].push(
             BorrowRecord({
+                recordId: nextRecordId,
                 itemId: _itemId,
                 borrower: msg.sender,
+                borrowerName: _borrowerName,
+                purpose: _purpose,
                 borrowTime: block.timestamp,
                 returnTime: 0,
-                isReturned: false,
-                borrowerName: _borrowerName,
-                purpose: _purpose
+                isReturned: false
             })
         );
 
-        // Add to user's borrowed items
-        userBorrowedItems[msg.sender].push(_itemId);
-
-        emit ItemBorrowed(_itemId, msg.sender, _borrowerName);
+        emit ItemBorrowed(nextRecordId, _itemId, msg.sender, _borrowerName);
+        nextRecordId++;
     }
 
-    // Return an item
     function returnItem(uint256 _itemId) public nonReentrant {
-        require(_itemId < nextItemId && _itemId > 0, "Item tidak ditemukan");
-        require(!items[_itemId].isAvailable, "Item tidak sedang dipinjam");
+        require(_itemId > 0 && _itemId < nextItemId, "Item does not exist");
         require(
-            items[_itemId].currentBorrower == msg.sender,
-            "Anda tidak meminjam item ini"
+            userBorrowedCount[msg.sender][_itemId] > 0,
+            "You have not borrowed this item"
         );
 
-        items[_itemId].isAvailable = true;
-        items[_itemId].currentBorrower = address(0);
-        items[_itemId].borrowTimestamp = 0;
+        Item storage item = items[_itemId];
 
-        // Update borrow history
-        BorrowRecord[] storage history = itemBorrowHistory[_itemId];
-        for (uint i = history.length; i > 0; i--) {
-            if (
-                !history[i - 1].isReturned &&
-                history[i - 1].borrower == msg.sender
-            ) {
-                history[i - 1].returnTime = block.timestamp;
-                history[i - 1].isReturned = true;
+        // Tambah jumlah yang tersedia dan kurangi catatan peminjaman user
+        item.availableQuantity++;
+        userBorrowedCount[msg.sender][_itemId]--;
+
+        // Cari dan perbarui catatan peminjaman di histori
+        for (uint i = itemBorrowHistory[_itemId].length; i > 0; i--) {
+            BorrowRecord storage record = itemBorrowHistory[_itemId][i - 1];
+            if (record.borrower == msg.sender && !record.isReturned) {
+                record.isReturned = true;
+                record.returnTime = block.timestamp;
+                emit ItemReturned(record.recordId, _itemId, msg.sender);
                 break;
             }
         }
-
-        // Remove from user's borrowed items
-        uint256[] storage userItems = userBorrowedItems[msg.sender];
-        for (uint i = 0; i < userItems.length; i++) {
-            if (userItems[i] == _itemId) {
-                userItems[i] = userItems[userItems.length - 1];
-                userItems.pop();
-                break;
-            }
-        }
-
-        emit ItemReturned(_itemId, msg.sender);
     }
 
-    // Get item details
-    function getItem(uint256 _itemId) public view returns (Item memory) {
-        require(_itemId < nextItemId && _itemId > 0, "Item tidak ditemukan");
-        return items[_itemId];
-    }
+    // --- View Functions (Fungsi untuk melihat data) ---
 
-    // Get all items
     function getAllItems() public view returns (Item[] memory) {
-        Item[] memory allItems = new Item[](totalItems);
-        uint256 index = 0;
-
+        // Menghitung dulu jumlah item yang valid untuk alokasi memori yang tepat
+        uint256 itemCount = 0;
         for (uint256 i = 1; i < nextItemId; i++) {
-            if (bytes(items[i].name).length > 0) {
+            if (items[i].id != 0) {
+                // Cek apakah item ada
+                itemCount++;
+            }
+        }
+
+        Item[] memory allItems = new Item[](itemCount);
+        uint256 index = 0;
+        for (uint256 i = 1; i < nextItemId; i++) {
+            if (items[i].id != 0) {
                 allItems[index] = items[i];
                 index++;
             }
         }
-
         return allItems;
     }
 
-    // Get available items
-    function getAvailableItems() public view returns (Item[] memory) {
-        uint256 availableCount = 0;
-
-        // Count available items
-        for (uint256 i = 1; i < nextItemId; i++) {
-            if (bytes(items[i].name).length > 0 && items[i].isAvailable) {
-                availableCount++;
+    function getUserBorrowedItems(
+        address _user
+    ) public view returns (Item[] memory, uint256[] memory) {
+        uint256 count = 0;
+        for (uint i = 1; i < nextItemId; i++) {
+            if (userBorrowedCount[_user][i] > 0) {
+                count++;
             }
         }
 
-        Item[] memory availableItems = new Item[](availableCount);
+        Item[] memory borrowed = new Item[](count);
+        uint256[] memory borrowedCounts = new uint256[](count);
         uint256 index = 0;
-
-        for (uint256 i = 1; i < nextItemId; i++) {
-            if (bytes(items[i].name).length > 0 && items[i].isAvailable) {
-                availableItems[index] = items[i];
+        for (uint i = 1; i < nextItemId; i++) {
+            if (userBorrowedCount[_user][i] > 0) {
+                borrowed[index] = items[i];
+                borrowedCounts[index] = userBorrowedCount[_user][i];
                 index++;
             }
         }
-
-        return availableItems;
+        return (borrowed, borrowedCounts);
     }
 
-    // Get user's borrowed items
-    function getUserBorrowedItems(
-        address _user
-    ) public view returns (uint256[] memory) {
-        return userBorrowedItems[_user];
-    }
-
-    // Get item borrow history
     function getItemBorrowHistory(
         uint256 _itemId
     ) public view returns (BorrowRecord[] memory) {
-        require(_itemId < nextItemId && _itemId > 0, "Item tidak ditemukan");
+        require(_itemId > 0 && _itemId < nextItemId, "Item does not exist");
         return itemBorrowHistory[_itemId];
     }
 }

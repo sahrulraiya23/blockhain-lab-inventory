@@ -1,61 +1,41 @@
 const hre = require("hardhat");
 
 async function main() {
-  // =================================================================
-  // 1. DEPLOY KONTRAK (dengan sintaks baru)
-  // =================================================================
   console.log("Deploying LabInventory contract...");
 
   const labInventory = await hre.ethers.deployContract("LabInventory");
-  await labInventory.waitForDeployment(); // <-- Menggunakan .waitForDeployment()
+  await labInventory.waitForDeployment();
 
   console.log(
-    `✅ LabInventory deployed to: ${labInventory.target}` // <-- Menggunakan .target
+    `✅ LabInventory deployed to: ${labInventory.target}`
   );
 
+  console.log("\nAdding sample items with quantity...");
 
-  // =================================================================
-  // 2. TAMBAHKAN DATA CONTOH (dengan menunggu setiap transaksi)
-  // =================================================================
-  console.log("\nAdding sample items...");
+  // Tambahkan item dengan jumlah (quantity)
+  const itemsToAdd = [
+    { name: "Arduino Uno R3", category: "Microcontroller", desc: "Arduino Uno dengan ATmega328P", loc: "Rak A1", qty: 10 },
+    { name: "Raspberry Pi 4", category: "Single Board Computer", desc: "Raspberry Pi 4 Model B 4GB RAM", loc: "Rak A2", qty: 5 },
+    { name: "Breadboard 830 Point", category: "Prototyping", desc: "Breadboard untuk prototyping elektronik", loc: "Rak B1", qty: 20 },
+    { name: "Kabel Jumper Male-to-Male", category: "Prototyping", desc: "Set kabel jumper 40 pcs", loc: "Laci C3", qty: 50 }
+  ];
 
-  // --- Item 1 ---
-  console.log("  - Adding 'Arduino Uno R3'...");
-  const tx1 = await labInventory.addItem(
-    "Arduino Uno R3",
-    "Microcontroller",
-    "Arduino Uno dengan ATmega328P",
-    "Rak A1"
-  );
-  await tx1.wait(); // <-- Tunggu transaksi selesai
-  console.log("    ... done.");
-
-  // --- Item 2 ---
-  console.log("  - Adding 'Raspberry Pi 4'...");
-  const tx2 = await labInventory.addItem(
-    "Raspberry Pi 4",
-    "Single Board Computer",
-    "Raspberry Pi 4 Model B 4GB RAM",
-    "Rak A2"
-  );
-  await tx2.wait(); // <-- Tunggu transaksi selesai
-  console.log("    ... done.");
-
-  // --- Item 3 ---
-  console.log("  - Adding 'Breadboard 830 Point'...");
-  const tx3 = await labInventory.addItem(
-    "Breadboard 830 Point",
-    "Prototyping",
-    "Breadboard untuk prototyping elektronik",
-    "Rak B1"
-  );
-  await tx3.wait(); // <-- Tunggu transaksi selesai
-  console.log("    ... done.");
+  for (const item of itemsToAdd) {
+    console.log(`  - Adding '${item.name}' (Qty: ${item.qty})...`);
+    const tx = await labInventory.addItem(
+      item.name,
+      item.category,
+      item.desc,
+      item.loc,
+      item.qty
+    );
+    await tx.wait(); // Tunggu transaksi selesai
+    console.log("    ... done.");
+  }
 
   console.log("\n✅ Sample items added successfully!");
 }
 
-// Pola standar untuk menjalankan skrip dan menangani error
 main().catch((error) => {
   console.error(error);
   process.exitCode = 1;

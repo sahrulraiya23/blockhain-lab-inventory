@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lab Inventory Management System</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/web3@1.8.0/dist/web3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
 </head>
 
 <body>
@@ -20,13 +20,12 @@
         </header>
 
         <nav class="tabs">
-            <button class="tab-button active" onclick="showTab('inventory')">📦 Inventory</button>
-            <button class="tab-button" onclick="showTab('borrow')">📝 Peminjaman</button>
-            <button class="tab-button" onclick="showTab('history')">📊 History</button>
-            <button class="tab-button" onclick="showTab('admin')">⚙️ Admin</button>
+            <button class="tab-button active" onclick="showTab(event, 'inventory')">🔍 Inventory</button>
+            <button class="tab-button" onclick="showTab(event, 'borrow')">🎒 Peminjaman</button>
+            <button class="tab-button" onclick="showTab(event, 'history')">📜 History</button>
+            <button class="tab-button" onclick="showTab(event, 'admin')">🔑 Tambah Barang</button>
         </nav>
 
-        <!-- Inventory Tab -->
         <div id="inventory" class="tab-content active">
             <h2>Daftar Inventaris</h2>
             <div class="filter-section">
@@ -41,29 +40,28 @@
                     <input type="checkbox" id="show-available-only"> Hanya yang tersedia
                 </label>
             </div>
-            <div id="items-container"></div>
+            <div id="items-container" class="items-grid"></div>
         </div>
 
-        <!-- Borrow Tab -->
         <div id="borrow" class="tab-content">
-            <h2>Peminjaman Saya</h2>
-            <div id="my-borrows-container"></div>
+            <h2>Peminjaman</h2>
+            <div id="my-borrows-container" class="items-grid"></div>
         </div>
 
-        <!-- History Tab -->
         <div id="history" class="tab-content">
             <h2>History Peminjaman</h2>
             <div id="history-container"></div>
         </div>
 
-        <!-- Admin Tab -->
         <div id="admin" class="tab-content">
             <h2>Admin Panel</h2>
+            <p><strong>Alamat Owner Kontrak:</strong> <span id="contract-owner-address">Loading...</span></p>
             <div class="admin-section">
                 <h3>Tambah Item Baru</h3>
                 <form id="add-item-form">
                     <input type="text" id="item-name" placeholder="Nama Item" required>
                     <input type="text" id="item-category" placeholder="Kategori" required>
+                    <input type="number" id="item-quantity" placeholder="Jumlah" required min="1">
                     <textarea id="item-description" placeholder="Deskripsi" required></textarea>
                     <input type="text" id="item-location" placeholder="Lokasi" required>
                     <button type="submit">Tambah Item</button>
@@ -72,14 +70,13 @@
         </div>
     </div>
 
-    <!-- Borrow Modal -->
     <div id="borrow-modal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
             <h3>Pinjam Item</h3>
             <form id="borrow-form">
                 <input type="hidden" id="borrow-item-id">
-                <input type="text" id="borrower-name" placeholder="Nama Peminjam" required>
+                <input type="text" id="borrower-name" placeholder="Nama Peminjam (Alamat Wallet)" required disabled>
                 <textarea id="borrow-purpose" placeholder="Tujuan Peminjaman" required></textarea>
                 <button type="submit">Pinjam</button>
             </form>
