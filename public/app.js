@@ -1,5 +1,5 @@
-// Contract ABI dan Address (akan diisi setelah deploy)
-const CONTRACT_ADDRESS = '0xaa1970D6AE41ffE73a4707c751089618987dda1f';
+// PENTING: Pastikan alamat kontrak dan ABI sudah yang terbaru
+const CONTRACT_ADDRESS = '0x9ed40d064F84F1b10d6D7589A7Af20736e330481'; // Ganti dengan alamat kontrak baru Anda
 const CONTRACT_ABI = [
     {
       "inputs": [],
@@ -7,14 +7,8 @@ const CONTRACT_ABI = [
       "type": "constructor"
     },
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "owner",
-          "type": "address"
-        }
-      ],
-      "name": "OwnableInvalidOwner",
+      "inputs": [],
+      "name": "AccessControlBadConfirmation",
       "type": "error"
     },
     {
@@ -23,9 +17,14 @@ const CONTRACT_ABI = [
           "internalType": "address",
           "name": "account",
           "type": "address"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "neededRole",
+          "type": "bytes32"
         }
       ],
-      "name": "OwnableUnauthorizedAccount",
+      "name": "AccessControlUnauthorizedAccount",
       "type": "error"
     },
     {
@@ -119,19 +118,127 @@ const CONTRACT_ABI = [
       "inputs": [
         {
           "indexed": true,
+          "internalType": "bytes32",
+          "name": "role",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "previousAdminRole",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "newAdminRole",
+          "type": "bytes32"
+        }
+      ],
+      "name": "RoleAdminChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "role",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
           "internalType": "address",
-          "name": "previousOwner",
+          "name": "account",
           "type": "address"
         },
         {
           "indexed": true,
           "internalType": "address",
-          "name": "newOwner",
+          "name": "sender",
           "type": "address"
         }
       ],
-      "name": "OwnershipTransferred",
+      "name": "RoleGranted",
       "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "role",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "sender",
+          "type": "address"
+        }
+      ],
+      "name": "RoleRevoked",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "ADMIN_ROLE",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "ASLAB_ROLE",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "DEFAULT_ADMIN_ROLE",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_aslabAddress",
+          "type": "address"
+        }
+      ],
+      "name": "addAslab",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
     },
     {
       "inputs": [
@@ -303,6 +410,25 @@ const CONTRACT_ABI = [
     {
       "inputs": [
         {
+          "internalType": "bytes32",
+          "name": "role",
+          "type": "bytes32"
+        }
+      ],
+      "name": "getRoleAdmin",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "internalType": "address",
           "name": "_user",
           "type": "address"
@@ -356,6 +482,48 @@ const CONTRACT_ABI = [
           "internalType": "uint256[]",
           "name": "",
           "type": "uint256[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "role",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "grantRole",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "role",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "hasRole",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
         }
       ],
       "stateMutability": "view",
@@ -496,21 +664,32 @@ const CONTRACT_ABI = [
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "owner",
-      "outputs": [
+      "inputs": [
         {
           "internalType": "address",
-          "name": "",
+          "name": "_aslabAddress",
           "type": "address"
         }
       ],
-      "stateMutability": "view",
+      "name": "removeAslab",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "renounceOwnership",
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "role",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "address",
+          "name": "callerConfirmation",
+          "type": "address"
+        }
+      ],
+      "name": "renounceRole",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -531,14 +710,38 @@ const CONTRACT_ABI = [
     {
       "inputs": [
         {
+          "internalType": "bytes32",
+          "name": "role",
+          "type": "bytes32"
+        },
+        {
           "internalType": "address",
-          "name": "newOwner",
+          "name": "account",
           "type": "address"
         }
       ],
-      "name": "transferOwnership",
+      "name": "revokeRole",
       "outputs": [],
       "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes4",
+          "name": "interfaceId",
+          "type": "bytes4"
+        }
+      ],
+      "name": "supportsInterface",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -565,11 +768,16 @@ const CONTRACT_ABI = [
       "stateMutability": "view",
       "type": "function"
     }
-  ]
-  // Akan diisi dengan ABI dari artifacts
+  ];
+
 let web3;
 let contract;
 let currentAccount;
+
+// Variabel untuk menyimpan hash dari peran
+let ADMIN_ROLE;
+let ASLAB_ROLE;
+let DEFAULT_ADMIN_ROLE;
 
 // Initialize Web3 dan Contract
 async function init() {
@@ -578,9 +786,14 @@ async function init() {
         try {
             await window.ethereum.request({ method: 'eth_requestAccounts' });
             contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+
+            // Menghitung hash peran menggunakan web3
+            ADMIN_ROLE = web3.utils.keccak256("ADMIN_ROLE");
+            ASLAB_ROLE = web3.utils.keccak256("ASLAB_ROLE");
+            DEFAULT_ADMIN_ROLE = await contract.methods.DEFAULT_ADMIN_ROLE().call();
             
             const accounts = await web3.eth.getAccounts();
-            handleAccountsChanged(accounts);
+            await handleAccountsChanged(accounts);
 
             window.ethereum.on('accountsChanged', handleAccountsChanged);
 
@@ -593,17 +806,24 @@ async function init() {
     }
 }
 
-function handleAccountsChanged(accounts) {
+async function handleAccountsChanged(accounts) {
     if (accounts.length === 0) {
         currentAccount = null;
     } else {
         currentAccount = accounts[0];
     }
     updateWalletUI();
-    // Muat ulang data setiap kali akun berganti
-    if (document.getElementById('inventory').classList.contains('active')) loadInventory();
-    if (document.getElementById('borrow').classList.contains('active')) loadMyBorrows();
-    if (document.getElementById('history').classList.contains('active')) loadHistory();
+    await updateAdminTabVisibility();
+
+    // Muat ulang data untuk tab yang sedang aktif
+    const activeTab = document.querySelector('.tab-content.active');
+    if (activeTab) {
+        const activeTabName = activeTab.id;
+        if (activeTabName === 'inventory') loadInventory();
+        if (activeTabName === 'borrow') loadMyBorrows();
+        if (activeTabName === 'history') loadHistory();
+        if (activeTabName === 'admin') loadOwnerInfo();
+    }
 }
 
 function updateWalletUI() {
@@ -621,13 +841,121 @@ function updateWalletUI() {
     }
 }
 
+async function updateAdminTabVisibility() {
+    const adminTabButton = document.getElementById('admin-tab-button');
+    if (!currentAccount || !contract) {
+        adminTabButton.style.display = 'none';
+        return;
+    }
+
+    try {
+        const isAslab = await contract.methods.hasRole(ASLAB_ROLE, currentAccount).call();
+        const isAdmin = await contract.methods.hasRole(ADMIN_ROLE, currentAccount).call();
+
+        if (isAslab || isAdmin) {
+            adminTabButton.style.display = 'flex';
+        } else {
+            adminTabButton.style.display = 'none';
+        }
+    } catch (error) {
+        console.error("Error checking role:", error);
+        adminTabButton.style.display = 'none';
+    }
+}
+
+function showTab(event, tabName) {
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.tab-button').forEach(button => button.classList.remove('active'));
+    
+    document.getElementById(tabName).classList.add('active');
+    event.currentTarget.classList.add('active');
+    
+    if (tabName === 'inventory') loadInventory();
+    if (tabName === 'borrow') loadMyBorrows();
+    if (tabName === 'history') loadHistory();
+    if (tabName === 'admin') loadOwnerInfo();
+}
+
+async function addItem() {
+    if (!currentAccount) return alert('Silakan hubungkan wallet Anda.');
+
+    const name = document.getElementById('item-name').value;
+    const category = document.getElementById('item-category').value;
+    const description = document.getElementById('item-description').value;
+    const location = document.getElementById('item-location').value;
+    const quantity = document.getElementById('item-quantity').value;
+
+    try {
+        await contract.methods.addItem(name, category, description, location, quantity).send({ from: currentAccount });
+        alert('Item berhasil ditambahkan!');
+        document.getElementById('add-item-form').reset();
+        loadInventory();
+    } catch (error) {
+        console.error('Error adding item:', error);
+        alert('Gagal menambahkan item. Pastikan Anda adalah admin atau aslab.');
+    }
+}
+
+// FUNGSI YANG HILANG - KINI DITAMBAHKAN KEMBALI
+function openBorrowModal(itemId) {
+    if (!currentAccount) {
+        alert("Silakan hubungkan wallet Anda terlebih dahulu.");
+        return;
+    }
+    document.getElementById('borrow-item-id').value = itemId;
+    document.getElementById('borrower-name').value = currentAccount; 
+    document.getElementById('borrow-modal').style.display = 'block';
+}
+
+function closeModal() {
+    document.getElementById('borrow-modal').style.display = 'none';
+}
+
+async function borrowItem() {
+    if (!currentAccount) return alert('Silakan hubungkan wallet Anda.');
+
+    const itemId = document.getElementById('borrow-item-id').value;
+    const borrowerName = document.getElementById('borrower-name').value; // borrowerName sekarang adalah alamat wallet
+    const purpose = document.getElementById('borrow-purpose').value;
+    
+    try {
+        await contract.methods.borrowItem(itemId, currentAccount, purpose).send({ from: currentAccount });
+        alert('Item berhasil dipinjam!');
+        closeModal();
+        loadInventory();
+        loadMyBorrows();
+        document.getElementById('borrow-form').reset();
+    } catch (error) {
+        console.error('Error borrowing item:', error);
+        alert('Gagal meminjam item: ' + (error.message || error.data?.message));
+    }
+}
+
+async function returnItem(itemId) {
+    if (!currentAccount) return alert('Silakan hubungkan wallet Anda.');
+
+    try {
+        await contract.methods.returnItem(itemId).send({ from: currentAccount });
+        alert('Item berhasil dikembalikan!');
+        loadInventory();
+        loadMyBorrows();
+    } catch (error) {
+        console.error('Error returning item:', error);
+        alert('Gagal mengembalikan item: ' + (error.message || error.data?.message));
+    }
+}
+
+// FUNGSI VIEW (TIDAK ADA PERUBAHAN BESAR)
 async function loadInventory() {
     if (!contract) return;
+    const container = document.getElementById('items-container');
+    container.innerHTML = '<div class="loading">Loading inventory...</div>';
     try {
         const items = await contract.methods.getAllItems().call();
         displayItems(items);
     } catch (error) {
         console.error('Error loading inventory:', error);
+        container.innerHTML = '<div class="empty-state">Gagal memuat inventaris.</div>';
     }
 }
 
@@ -672,101 +1000,13 @@ function createItemCard(item, userBorrowedCount) {
             </div>
         </div>
     `;
-    
     return card;
-}
-
-async function addItem() {
-    if (!currentAccount) return alert('Silakan hubungkan wallet Anda.');
-
-    const name = document.getElementById('item-name').value;
-    const category = document.getElementById('item-category').value;
-    const description = document.getElementById('item-description').value;
-    const location = document.getElementById('item-location').value;
-    const quantity = document.getElementById('item-quantity').value;
-
-    try {
-        await contract.methods.addItem(name, category, description, location, quantity)
-            .send({ from: currentAccount });
-        
-        alert('Item berhasil ditambahkan!');
-        document.getElementById('add-item-form').reset();
-    } catch (error) {
-        console.error('Error adding item:', error);
-        alert('Gagal menambahkan item. Pastikan Anda adalah admin.');
-    }
-}
-
-function openBorrowModal(itemId) {
-    if (!currentAccount) {
-        alert("Silakan hubungkan wallet Anda terlebih dahulu.");
-        return;
-    }
-    document.getElementById('borrow-item-id').value = itemId;
-    document.getElementById('borrower-name').value = currentAccount; 
-    document.getElementById('borrow-modal').style.display = 'block';
-}
-
-function closeModal() {
-    document.getElementById('borrow-modal').style.display = 'none';
-}
-
-async function borrowItem() {
-    if (!currentAccount) return alert('Silakan hubungkan wallet Anda.');
-
-    const itemId = document.getElementById('borrow-item-id').value;
-    const borrowerName = document.getElementById('borrower-name').value;
-    const purpose = document.getElementById('borrow-purpose').value;
-    
-    try {
-        await contract.methods.borrowItem(itemId, borrowerName, purpose)
-            .send({ from: currentAccount });
-        
-        alert('Item berhasil dipinjam!');
-        closeModal();
-        loadInventory();
-        loadMyBorrows();
-        document.getElementById('borrow-form').reset();
-    } catch (error) {
-        console.error('Error borrowing item:', error);
-        alert('Gagal meminjam item: ' + (error.data ? error.data.message : error.message));
-    }
-}
-
-async function returnItem(itemId) {
-    if (!currentAccount) return alert('Silakan hubungkan wallet Anda.');
-
-    try {
-        await contract.methods.returnItem(itemId)
-            .send({ from: currentAccount });
-        
-        alert('Item berhasil dikembalikan!');
-        loadInventory();
-        loadMyBorrows();
-    } catch (error) {
-        console.error('Error returning item:', error);
-        alert('Gagal mengembalikan item: ' + (error.data ? error.data.message : error.message));
-    }
-}
-
-function showTab(event, tabName) {
-    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-    document.querySelectorAll('.tab-button').forEach(button => button.classList.remove('active'));
-    
-    document.getElementById(tabName).classList.add('active');
-    event.currentTarget.classList.add('active');
-    
-    if (tabName === 'inventory') loadInventory();
-    if (tabName === 'borrow') loadMyBorrows();
-    if (tabName === 'history') loadHistory();
 }
 
 async function loadMyBorrows() {
     if (!currentAccount || !contract) return;
-    
     const container = document.getElementById('my-borrows-container');
-    container.innerHTML = '';
-    
+    container.innerHTML = '<div class="loading">Loading...</div>';
     try {
         const result = await contract.methods.getUserBorrowedItems(currentAccount).call();
         const borrowedItems = result[0];
@@ -777,6 +1017,7 @@ async function loadMyBorrows() {
             return;
         }
         
+        container.innerHTML = ''; // Clear loading
         borrowedItems.forEach((item, index) => {
             const card = document.createElement('div');
             card.className = 'item-card';
@@ -792,26 +1033,24 @@ async function loadMyBorrows() {
         });
     } catch (error) {
         console.error('Error loading my borrows:', error);
+        container.innerHTML = '<div class="empty-state">Gagal memuat data peminjaman.</div>';
     }
 }
 
 async function loadHistory() {
     if (!contract) return;
     const container = document.getElementById('history-container');
-    container.innerHTML = '';
-    
+    container.innerHTML = '<div class="loading">Loading history...</div>';
     try {
         const items = await contract.methods.getAllItems().call();
         let hasHistory = false;
+        let allHistoryHtml = '';
 
         for (const item of items) {
-const history = await contract.methods.getItemBorrowHistory(item.id).call();
+            const history = await contract.methods.getItemBorrowHistory(item.id).call();
             if (history.length > 0) {
                 hasHistory = true;
-                const historyCard = document.createElement('div');
-                historyCard.className = 'history-card';
-                
-                let historyHTML = `<h3>${item.name}</h3>`;
+                let historyHTML = `<h3>Riwayat untuk: ${item.name}</h3>`;
                 history.slice().reverse().forEach(record => {
                     historyHTML += `
                         <div class="history-item">
@@ -822,24 +1061,30 @@ const history = await contract.methods.getItemBorrowHistory(item.id).call();
                         </div>
                     `;
                 });
-                historyCard.innerHTML = historyHTML;
-                container.appendChild(historyCard);
+                allHistoryHtml += `<div class="history-card">${historyHTML}</div>`;
             }
         }
         
         if (!hasHistory) {
             container.innerHTML = '<div class="empty-state">Belum ada histori peminjaman</div>';
+        } else {
+            container.innerHTML = allHistoryHtml;
         }
     } catch (error) {
         console.error('Error loading history:', error);
+        container.innerHTML = '<div class="empty-state">Gagal memuat histori.</div>';
     }
 }
+
 async function loadOwnerInfo() {
+    // FUNGSI INI DIPERBAIKI
+    if (!contract) return;
     try {
-        const ownerAddress = await contract.methods.owner().call();
+        // Mengambil anggota pertama dari DEFAULT_ADMIN_ROLE, yang merupakan deployer/super admin
+        const adminAddress = await contract.methods.getRoleMember(DEFAULT_ADMIN_ROLE, 0).call();
         const ownerSpan = document.getElementById('contract-owner-address');
         if (ownerSpan) {
-            ownerSpan.textContent = ownerAddress;
+            ownerSpan.textContent = adminAddress;
         }
     } catch (error) {
         console.error('Error loading owner info:', error);
@@ -869,7 +1114,6 @@ async function filterItems() {
     }
 }
 
-// Utility Functions
 function formatAddress(address) {
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
 }
@@ -898,7 +1142,5 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('filter-category').addEventListener('change', filterItems);
     document.getElementById('show-available-only').addEventListener('change', filterItems);
 
-     initWeb3();
-    setupFilters();
-    loadOwnerInfo();
+    init(); 
 });

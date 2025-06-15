@@ -1,18 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+// DIUBAH: Mengganti Ownable dengan AccessControl
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract LabInventory is Ownable, ReentrancyGuard {
+// DIUBAH: Menghapus Ownable dan menambahkan AccessControl
+contract LabInventory is AccessControl, ReentrancyGuard {
     struct Item {
         uint256 id;
         string name;
         string category;
         string description;
         string location;
-        uint256 totalQuantity; // Jumlah total item yang ada
-        uint256 availableQuantity; // Jumlah yang tersedia untuk dipinjam
+        uint256 totalQuantity;
+        uint256 availableQuantity;
     }
 
     struct BorrowRecord {
@@ -26,14 +28,15 @@ contract LabInventory is Ownable, ReentrancyGuard {
         bool isReturned;
     }
 
+    // DITAMBAHKAN: Mendefinisikan peran sebagai bytes32
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 public constant ASLAB_ROLE = keccak256("ASLAB_ROLE");
+
     uint256 public nextItemId;
     uint256 public nextRecordId;
 
     mapping(uint256 => Item) public items;
     mapping(uint256 => BorrowRecord[]) public itemBorrowHistory;
-
-    // Mapping untuk melacak berapa banyak unit item yang dipinjam oleh user
-    // userAddress => itemId => count
     mapping(address => mapping(uint256 => uint256)) public userBorrowedCount;
 
     event ItemAdded(uint256 indexed itemId, string name, uint256 quantity);
@@ -49,19 +52,45 @@ contract LabInventory is Ownable, ReentrancyGuard {
         address borrower
     );
 
-    constructor() Ownable(msg.sender) {
+    // DIUBAH: Constructor untuk setup AccessControl
+    constructor() {
+        // Alamat yang mendeploy kontrak ini akan mendapatkan peran super admin (DEFAULT_ADMIN_ROLE)
+        // dan juga peran ADMIN_ROLE.
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(ADMIN_ROLE, msg.sender);
+
+        // Menetapkan bahwa hanya ADMIN yang bisa memberikan atau mencabut peran ASLAB_ROLE.
+        _setRoleAdmin(ASLAB_ROLE, ADMIN_ROLE);
+
         nextItemId = 1;
         nextRecordId = 1;
     }
 
+    // DITAMBAHKAN: Fungsi untuk Admin menambah Aslab baru
+    function addAslab(address _aslabAddress) public onlyRole(ADMIN_ROLE) {
+        grantRole(ASLAB_ROLE, _aslabAddress);
+    }
+
+    // DITAMBAHKAN: Fungsi untuk Admin menghapus Aslab
+    function removeAslab(address _aslabAddress) public onlyRole(ADMIN_ROLE) {
+        revokeRole(ASLAB_ROLE, _aslabAddress);
+    }
+
+    // DIUBAH: Menghapus modifier 'onlyOwner' dan menggunakan pengecekan peran
     function addItem(
         string memory _name,
         string memory _category,
         string memory _description,
         string memory _location,
         uint256 _quantity
-    ) public onlyOwner {
+    ) public {
+        // Hanya alamat dengan ADMIN_ROLE atau ASLAB_ROLE yang bisa menjalankan fungsi ini
+        require(
+            hasRole(ADMIN_ROLE, msg.sender) || hasRole(ASLAB_ROLE, msg.sender),
+            "Caller is not an admin or aslab"
+        );
         require(_quantity > 0, "Quantity must be greater than 0");
+
         items[nextItemId] = Item(
             nextItemId,
             _name,
@@ -69,7 +98,7 @@ contract LabInventory is Ownable, ReentrancyGuard {
             _description,
             _location,
             _quantity,
-            _quantity // Awalnya, jumlah tersedia = jumlah total
+            _quantity
         );
         emit ItemAdded(nextItemId, _name, _quantity);
         nextItemId++;
@@ -84,11 +113,9 @@ contract LabInventory is Ownable, ReentrancyGuard {
         Item storage item = items[_itemId];
         require(item.availableQuantity > 0, "Item not available");
 
-        // Kurangi jumlah yang tersedia dan catat peminjaman user
         item.availableQuantity--;
         userBorrowedCount[msg.sender][_itemId]++;
 
-        // Tambahkan ke histori peminjaman
         itemBorrowHistory[_itemId].push(
             BorrowRecord({
                 recordId: nextRecordId,
@@ -114,12 +141,9 @@ contract LabInventory is Ownable, ReentrancyGuard {
         );
 
         Item storage item = items[_itemId];
-
-        // Tambah jumlah yang tersedia dan kurangi catatan peminjaman user
         item.availableQuantity++;
         userBorrowedCount[msg.sender][_itemId]--;
 
-        // Cari dan perbarui catatan peminjaman di histori
         for (uint i = itemBorrowHistory[_itemId].length; i > 0; i--) {
             BorrowRecord storage record = itemBorrowHistory[_itemId][i - 1];
             if (record.borrower == msg.sender && !record.isReturned) {
@@ -131,14 +155,12 @@ contract LabInventory is Ownable, ReentrancyGuard {
         }
     }
 
-    // --- View Functions (Fungsi untuk melihat data) ---
+    // --- View Functions ---
 
     function getAllItems() public view returns (Item[] memory) {
-        // Menghitung dulu jumlah item yang valid untuk alokasi memori yang tepat
         uint256 itemCount = 0;
         for (uint256 i = 1; i < nextItemId; i++) {
             if (items[i].id != 0) {
-                // Cek apakah item ada
                 itemCount++;
             }
         }
