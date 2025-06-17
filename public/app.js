@@ -1,805 +1,46 @@
-// PENTING: Pastikan alamat kontrak dan ABI sudah yang terbaru
-const CONTRACT_ADDRESS = '0x9ed40d064F84F1b10d6D7589A7Af20736e330481'; // Ganti dengan alamat kontrak baru Anda
-const CONTRACT_ABI = [
-    {
-      "inputs": [],
-      "stateMutability": "nonpayable",
-      "type": "constructor"
-    },
-    {
-      "inputs": [],
-      "name": "AccessControlBadConfirmation",
-      "type": "error"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "account",
-          "type": "address"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "neededRole",
-          "type": "bytes32"
-        }
-      ],
-      "name": "AccessControlUnauthorizedAccount",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "ReentrancyGuardReentrantCall",
-      "type": "error"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "itemId",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "string",
-          "name": "name",
-          "type": "string"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "quantity",
-          "type": "uint256"
-        }
-      ],
-      "name": "ItemAdded",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "recordId",
-          "type": "uint256"
-        },
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "itemId",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "borrower",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "string",
-          "name": "borrowerName",
-          "type": "string"
-        }
-      ],
-      "name": "ItemBorrowed",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "recordId",
-          "type": "uint256"
-        },
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "itemId",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "borrower",
-          "type": "address"
-        }
-      ],
-      "name": "ItemReturned",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "bytes32",
-          "name": "role",
-          "type": "bytes32"
-        },
-        {
-          "indexed": true,
-          "internalType": "bytes32",
-          "name": "previousAdminRole",
-          "type": "bytes32"
-        },
-        {
-          "indexed": true,
-          "internalType": "bytes32",
-          "name": "newAdminRole",
-          "type": "bytes32"
-        }
-      ],
-      "name": "RoleAdminChanged",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "bytes32",
-          "name": "role",
-          "type": "bytes32"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "account",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "sender",
-          "type": "address"
-        }
-      ],
-      "name": "RoleGranted",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "bytes32",
-          "name": "role",
-          "type": "bytes32"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "account",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "sender",
-          "type": "address"
-        }
-      ],
-      "name": "RoleRevoked",
-      "type": "event"
-    },
-    {
-      "inputs": [],
-      "name": "ADMIN_ROLE",
-      "outputs": [
-        {
-          "internalType": "bytes32",
-          "name": "",
-          "type": "bytes32"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "ASLAB_ROLE",
-      "outputs": [
-        {
-          "internalType": "bytes32",
-          "name": "",
-          "type": "bytes32"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "DEFAULT_ADMIN_ROLE",
-      "outputs": [
-        {
-          "internalType": "bytes32",
-          "name": "",
-          "type": "bytes32"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "_aslabAddress",
-          "type": "address"
-        }
-      ],
-      "name": "addAslab",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "string",
-          "name": "_name",
-          "type": "string"
-        },
-        {
-          "internalType": "string",
-          "name": "_category",
-          "type": "string"
-        },
-        {
-          "internalType": "string",
-          "name": "_description",
-          "type": "string"
-        },
-        {
-          "internalType": "string",
-          "name": "_location",
-          "type": "string"
-        },
-        {
-          "internalType": "uint256",
-          "name": "_quantity",
-          "type": "uint256"
-        }
-      ],
-      "name": "addItem",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "_itemId",
-          "type": "uint256"
-        },
-        {
-          "internalType": "string",
-          "name": "_borrowerName",
-          "type": "string"
-        },
-        {
-          "internalType": "string",
-          "name": "_purpose",
-          "type": "string"
-        }
-      ],
-      "name": "borrowItem",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "getAllItems",
-      "outputs": [
-        {
-          "components": [
-            {
-              "internalType": "uint256",
-              "name": "id",
-              "type": "uint256"
-            },
-            {
-              "internalType": "string",
-              "name": "name",
-              "type": "string"
-            },
-            {
-              "internalType": "string",
-              "name": "category",
-              "type": "string"
-            },
-            {
-              "internalType": "string",
-              "name": "description",
-              "type": "string"
-            },
-            {
-              "internalType": "string",
-              "name": "location",
-              "type": "string"
-            },
-            {
-              "internalType": "uint256",
-              "name": "totalQuantity",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "availableQuantity",
-              "type": "uint256"
-            }
-          ],
-          "internalType": "struct LabInventory.Item[]",
-          "name": "",
-          "type": "tuple[]"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "_itemId",
-          "type": "uint256"
-        }
-      ],
-      "name": "getItemBorrowHistory",
-      "outputs": [
-        {
-          "components": [
-            {
-              "internalType": "uint256",
-              "name": "recordId",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "itemId",
-              "type": "uint256"
-            },
-            {
-              "internalType": "address",
-              "name": "borrower",
-              "type": "address"
-            },
-            {
-              "internalType": "string",
-              "name": "borrowerName",
-              "type": "string"
-            },
-            {
-              "internalType": "string",
-              "name": "purpose",
-              "type": "string"
-            },
-            {
-              "internalType": "uint256",
-              "name": "borrowTime",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "returnTime",
-              "type": "uint256"
-            },
-            {
-              "internalType": "bool",
-              "name": "isReturned",
-              "type": "bool"
-            }
-          ],
-          "internalType": "struct LabInventory.BorrowRecord[]",
-          "name": "",
-          "type": "tuple[]"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "role",
-          "type": "bytes32"
-        }
-      ],
-      "name": "getRoleAdmin",
-      "outputs": [
-        {
-          "internalType": "bytes32",
-          "name": "",
-          "type": "bytes32"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "_user",
-          "type": "address"
-        }
-      ],
-      "name": "getUserBorrowedItems",
-      "outputs": [
-        {
-          "components": [
-            {
-              "internalType": "uint256",
-              "name": "id",
-              "type": "uint256"
-            },
-            {
-              "internalType": "string",
-              "name": "name",
-              "type": "string"
-            },
-            {
-              "internalType": "string",
-              "name": "category",
-              "type": "string"
-            },
-            {
-              "internalType": "string",
-              "name": "description",
-              "type": "string"
-            },
-            {
-              "internalType": "string",
-              "name": "location",
-              "type": "string"
-            },
-            {
-              "internalType": "uint256",
-              "name": "totalQuantity",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "availableQuantity",
-              "type": "uint256"
-            }
-          ],
-          "internalType": "struct LabInventory.Item[]",
-          "name": "",
-          "type": "tuple[]"
-        },
-        {
-          "internalType": "uint256[]",
-          "name": "",
-          "type": "uint256[]"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "role",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "address",
-          "name": "account",
-          "type": "address"
-        }
-      ],
-      "name": "grantRole",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "role",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "address",
-          "name": "account",
-          "type": "address"
-        }
-      ],
-      "name": "hasRole",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "itemBorrowHistory",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "recordId",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "itemId",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "borrower",
-          "type": "address"
-        },
-        {
-          "internalType": "string",
-          "name": "borrowerName",
-          "type": "string"
-        },
-        {
-          "internalType": "string",
-          "name": "purpose",
-          "type": "string"
-        },
-        {
-          "internalType": "uint256",
-          "name": "borrowTime",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "returnTime",
-          "type": "uint256"
-        },
-        {
-          "internalType": "bool",
-          "name": "isReturned",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "items",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "id",
-          "type": "uint256"
-        },
-        {
-          "internalType": "string",
-          "name": "name",
-          "type": "string"
-        },
-        {
-          "internalType": "string",
-          "name": "category",
-          "type": "string"
-        },
-        {
-          "internalType": "string",
-          "name": "description",
-          "type": "string"
-        },
-        {
-          "internalType": "string",
-          "name": "location",
-          "type": "string"
-        },
-        {
-          "internalType": "uint256",
-          "name": "totalQuantity",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "availableQuantity",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "nextItemId",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "nextRecordId",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "_aslabAddress",
-          "type": "address"
-        }
-      ],
-      "name": "removeAslab",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "role",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "address",
-          "name": "callerConfirmation",
-          "type": "address"
-        }
-      ],
-      "name": "renounceRole",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "_itemId",
-          "type": "uint256"
-        }
-      ],
-      "name": "returnItem",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "role",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "address",
-          "name": "account",
-          "type": "address"
-        }
-      ],
-      "name": "revokeRole",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes4",
-          "name": "interfaceId",
-          "type": "bytes4"
-        }
-      ],
-      "name": "supportsInterface",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "userBorrowedCount",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    }
-  ];
-
 let web3;
 let contract;
 let currentAccount;
 
-// Variabel untuk menyimpan hash dari peran
+
 let ADMIN_ROLE;
 let ASLAB_ROLE;
 let DEFAULT_ADMIN_ROLE;
 
-// Initialize Web3 dan Contract
+
 async function init() {
     if (typeof window.ethereum !== 'undefined') {
-        web3 = new Web3(window.ethereum);
         try {
+            // 1. Muat Alamat & ABI Kontrak dari file JSON
+            const addressResponse = await fetch('./contracts/contract-address.json');
+            const addressData = await addressResponse.json();
+            const CONTRACT_ADDRESS = addressData.address;
+
+            const abiResponse = await fetch('./contracts/LabInventory.json');
+            const abiData = await abiResponse.json();
+            const CONTRACT_ABI = abiData.abi;
+
+            // 2. Hubungkan ke Web3 dan MetaMask
+            web3 = new Web3(window.ethereum);
             await window.ethereum.request({ method: 'eth_requestAccounts' });
+            
+            // 3. Buat instance kontrak
             contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
 
-            // Menghitung hash peran menggunakan web3
+            // 4. Hitung hash peran menggunakan web3
             ADMIN_ROLE = web3.utils.keccak256("ADMIN_ROLE");
             ASLAB_ROLE = web3.utils.keccak256("ASLAB_ROLE");
             DEFAULT_ADMIN_ROLE = await contract.methods.DEFAULT_ADMIN_ROLE().call();
             
+            // 5. Tangani perubahan akun
             const accounts = await web3.eth.getAccounts();
             await handleAccountsChanged(accounts);
 
             window.ethereum.on('accountsChanged', handleAccountsChanged);
 
         } catch (error) {
-            console.error("User denied account access", error);
-            alert('Anda harus menghubungkan MetaMask untuk menggunakan aplikasi ini.');
+            console.error("Initialization error:", error);
+            alert('Gagal menginisialisasi aplikasi. Pastikan Anda sudah men-deploy kontrak dan server berjalan.');
         }
     } else {
         alert('MetaMask tidak terdeteksi. Silakan install MetaMask.');
@@ -896,7 +137,6 @@ async function addItem() {
     }
 }
 
-// FUNGSI YANG HILANG - KINI DITAMBAHKAN KEMBALI
 function openBorrowModal(itemId) {
     if (!currentAccount) {
         alert("Silakan hubungkan wallet Anda terlebih dahulu.");
@@ -915,10 +155,10 @@ async function borrowItem() {
     if (!currentAccount) return alert('Silakan hubungkan wallet Anda.');
 
     const itemId = document.getElementById('borrow-item-id').value;
-    const borrowerName = document.getElementById('borrower-name').value; // borrowerName sekarang adalah alamat wallet
     const purpose = document.getElementById('borrow-purpose').value;
     
     try {
+        // Nama peminjam sekarang diambil dari alamat wallet yang terhubung
         await contract.methods.borrowItem(itemId, currentAccount, purpose).send({ from: currentAccount });
         alert('Item berhasil dipinjam!');
         closeModal();
@@ -945,14 +185,13 @@ async function returnItem(itemId) {
     }
 }
 
-// FUNGSI VIEW (TIDAK ADA PERUBAHAN BESAR)
 async function loadInventory() {
     if (!contract) return;
     const container = document.getElementById('items-container');
     container.innerHTML = '<div class="loading">Loading inventory...</div>';
     try {
         const items = await contract.methods.getAllItems().call();
-        displayItems(items);
+        await displayItems(items);
     } catch (error) {
         console.error('Error loading inventory:', error);
         container.innerHTML = '<div class="empty-state">Gagal memuat inventaris.</div>';
@@ -969,8 +208,10 @@ async function displayItems(items) {
     }
     
     for (const item of items) {
-        const userBorrowed = currentAccount ? Number(await contract.methods.userBorrowedCount(currentAccount, item.id).call()) : 0;
-        const itemCard = createItemCard(item, userBorrowed);
+        // Cek jumlah yang dipinjam oleh user saat ini
+        const userBorrowedCount = currentAccount ? await contract.methods.userBorrowedCount(currentAccount, item.id).call() : 0;
+        
+        const itemCard = createItemCard(item, Number(userBorrowedCount));
         container.appendChild(itemCard);
     }
 }
@@ -984,20 +225,18 @@ function createItemCard(item, userBorrowedCount) {
     card.className = `item-card ${availableQuantity === 0 ? 'unavailable' : ''}`;
     
     card.innerHTML = `
-        <div>
+        <div class="item-header">
             <h3>${item.name}</h3>
-            <p><strong>Kategori:</strong> ${item.category}</p>
-            <p><strong>Lokasi:</strong> ${item.location}</p>
-            <p><strong>Deskripsi:</strong> ${item.description}</p>
-        </div>
-        <div>
             <div class="item-quantity ${availableQuantity > 0 ? 'quantity-available' : 'quantity-none'}">
                 Tersedia: ${availableQuantity} / ${totalQuantity}
             </div>
-            <div class="item-actions">
-                <button class="btn btn-primary" onclick="openBorrowModal(${itemId})" ${availableQuantity === 0 ? 'disabled' : ''}>Pinjam</button>
-                <button class="btn btn-danger" onclick="returnItem(${itemId})" ${userBorrowedCount === 0 ? 'disabled' : ''}>Kembalikan</button>
-            </div>
+        </div>
+        <p><strong>Kategori:</strong> ${item.category}</p>
+        <p><strong>Lokasi:</strong> ${item.location}</p>
+        <p><strong>Deskripsi:</strong> ${item.description}</p>
+        <div class="item-actions">
+            <button class="btn btn-primary" onclick="openBorrowModal(${itemId})" ${availableQuantity === 0 ? 'disabled' : ''}>Pinjam</button>
+            <button class="btn btn-danger" onclick="returnItem(${itemId})" ${userBorrowedCount === 0 ? 'disabled' : ''}>Kembalikan</button>
         </div>
     `;
     return card;
@@ -1077,10 +316,8 @@ async function loadHistory() {
 }
 
 async function loadOwnerInfo() {
-    // FUNGSI INI DIPERBAIKI
     if (!contract) return;
     try {
-        // Mengambil anggota pertama dari DEFAULT_ADMIN_ROLE, yang merupakan deployer/super admin
         const adminAddress = await contract.methods.getRoleMember(DEFAULT_ADMIN_ROLE, 0).call();
         const ownerSpan = document.getElementById('contract-owner-address');
         if (ownerSpan) {
@@ -1142,5 +379,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('filter-category').addEventListener('change', filterItems);
     document.getElementById('show-available-only').addEventListener('change', filterItems);
 
+    // Langsung panggil init untuk memulai koneksi saat halaman dimuat
     init(); 
 });

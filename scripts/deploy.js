@@ -1,4 +1,6 @@
 const hre = require("hardhat");
+const fs = require('fs');
+const path = require('path');
 
 async function main() {
   console.log("Deploying LabInventory contract...");
@@ -11,6 +13,9 @@ async function main() {
   console.log(
     `✅ LabInventory deployed to: ${labInventory.target}`
   );
+
+  // Menyimpan alamat kontrak dan ABI untuk digunakan oleh frontend
+  saveFrontendFiles(labInventory);
 
   console.log("\nAdding sample items with quantity...");
   const itemsToAdd = [
@@ -34,26 +39,48 @@ async function main() {
   }
   console.log("\n✅ Sample items added successfully!");
 
-
   console.log("\nSetting up roles...");
+  // PENTING: Ganti dengan alamat-alamat akun ASLAB yang valid dari Ganache Anda
   const aslabAddresses = [
-    "0x460d133b970095dbfedb6efb94541385cc38cd47748b996ca21617a0867a7b28",
-    "0x8f0f17c1774c45a8c61f219a6ba39615656598ee42ba837a95845292e29e577f",
-  
+    "0xcd6064C9B9d91d2F608e69ef23c40C6353975acC", 
+    "0xC951418a55D3ea223e3929A70a3Bad95221B7F3a"  
   ];
 
   for (const aslabAddress of aslabAddresses) {
-    if (hre.ethers.isAddress(aslabAddress)) { // Pengecekan sederhana
+    if (hre.ethers.isAddress(aslabAddress)) {
         console.log(`  - Granting ASLAB_ROLE to ${aslabAddress}...`);
         const tx = await labInventory.connect(admin).addAslab(aslabAddress);
         await tx.wait();
         console.log("    ... done.");
     } else {
-        console.warn(`  - Skipping invalid address: ${aslabAddress}`);
+        console.warn(`  - Skipping invalid address: ${aslabAddress}. Please replace it with a valid address.`);
     }
   }
-
   console.log("\n✅ Roles configured successfully!");
+}
+
+// Fungsi untuk menyimpan alamat dan ABI
+function saveFrontendFiles(contract) {
+  const contractsDir = path.join(__dirname, '..', 'public', 'contracts');
+
+  if (!fs.existsSync(contractsDir)) {
+    fs.mkdirSync(contractsDir);
+  }
+
+  // Simpan alamat kontrak
+  fs.writeFileSync(
+    path.join(contractsDir, 'contract-address.json'),
+    JSON.stringify({ address: contract.target }, undefined, 2)
+  );
+
+  // Simpan ABI kontrak
+  const LabInventoryArtifact = hre.artifacts.readArtifactSync("LabInventory");
+  fs.writeFileSync(
+    path.join(contractsDir, 'LabInventory.json'),
+    JSON.stringify(LabInventoryArtifact, null, 2)
+  );
+
+  console.log("\n✅ Contract address and ABI saved to /public/contracts");
 }
 
 main().catch((error) => {
