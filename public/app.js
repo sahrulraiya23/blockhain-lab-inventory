@@ -136,6 +136,24 @@ async function addItem() {
         alert('Gagal menambahkan item. Pastikan Anda adalah admin atau aslab.');
     }
 }
+async function addAslab() {
+    if (!currentAccount) return alert('Silakan hubungkan wallet Anda.');
+
+    const aslabAddress = document.getElementById('aslab-address').value;
+
+    if (!web3.utils.isAddress(aslabAddress)) {
+        return alert('Alamat wallet tidak valid.');
+    }
+
+    try {
+        await contract.methods.addAslab(aslabAddress).send({ from: currentAccount });
+        alert(`Aslab dengan alamat ${aslabAddress} berhasil ditambahkan!`);
+        document.getElementById('add-aslab-form').reset();
+    } catch (error) {
+        console.error('Error adding aslab:', error);
+        alert('Gagal menambahkan aslab. Pastikan Anda adalah owner.');
+    }
+}
 
 function openBorrowModal(itemId) {
     if (!currentAccount) {
@@ -317,16 +335,23 @@ async function loadHistory() {
 
 async function loadOwnerInfo() {
     if (!contract) return;
+    const ownerSpan = document.getElementById('contract-owner-address');
     try {
-        const adminAddress = await contract.methods.getRoleMember(DEFAULT_ADMIN_ROLE, 0).call();
-        const ownerSpan = document.getElementById('contract-owner-address');
-        if (ownerSpan) {
-            ownerSpan.textContent = adminAddress;
+        const adminRole = await contract.methods.DEFAULT_ADMIN_ROLE().call();
+        const pastEvents = await contract.getPastEvents('RoleGranted', {
+            filter: { role: adminRole },
+            fromBlock: 0, 
+            toBlock: 'latest'
+        });
+        if (pastEvents && pastEvents.length > 0) {
+            const ownerAddress = pastEvents[0].returnValues.account;
+            ownerSpan.textContent = ownerAddress;
+        } else {
+            ownerSpan.textContent = 'Owner tidak ditemukan.';
         }
     } catch (error) {
         console.error('Error loading owner info:', error);
-        const ownerSpan = document.getElementById('contract-owner-address');
-        if(ownerSpan) ownerSpan.textContent = 'Gagal memuat.';
+        if(ownerSpan) ownerSpan.textContent = 'Gagal memuat info owner.';
     }
 }
 
@@ -374,7 +399,10 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         addItem();
     });
-    
+    document.getElementById('add-aslab-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        addAslab();
+    });
     document.getElementById('search-items').addEventListener('input', filterItems);
     document.getElementById('filter-category').addEventListener('change', filterItems);
     document.getElementById('show-available-only').addEventListener('change', filterItems);
