@@ -18,11 +18,14 @@ async function main() {
   saveFrontendFiles(labInventory);
 
   console.log("\nAdding sample items with quantity...");
+  // DIUBAH: Item-item sampel yang relevan untuk lab rekayasa perangkat lunak dan menghapus 'loc'
   const itemsToAdd = [
-    { name: "Arduino Uno R3", category: "Microcontroller", desc: "Arduino Uno dengan ATmega328P", loc: "Rak A1", qty: 10 },
-    { name: "Raspberry Pi 4", category: "Single Board Computer", desc: "Raspberry Pi 4 Model B 4GB RAM", loc: "Rak A2", qty: 5 },
-    { name: "Breadboard 830 Point", category: "Prototyping", desc: "Breadboard untuk prototyping elektronik", loc: "Rak B1", qty: 20 },
-    { name: "Kabel Jumper Male-to-Male", category: "Prototyping", desc: "Set kabel jumper 40 pcs", loc: "Laci C3", qty: 50 }
+    { name: "Unit Server Dell PowerEdge", category: "Hardware", desc: "Server untuk deployment aplikasi dan database", qty: 2 },
+    { name: "Workstation High-Performance", category: "Hardware", desc: "Komputer untuk kompilasi kode dan testing", qty: 5 },
+    { name: "Monitor Ultra-Wide", category: "Periferal", desc: "Monitor untuk produktivitas coding", qty: 10 },
+    { name: "Keyboard Mekanik", category: "Periferal", desc: "Keyboard ergonomis untuk developer", qty: 15 },
+    { name: "Lisensi IntelliJ IDEA Ultimate", category: "Software", desc: "Lisensi tahunan untuk IDE pengembangan", qty: 3 },
+    { name: "Buku 'Clean Code'", category: "Buku", desc: "Buku panduan praktik coding bersih", qty: 8 }
   ];
 
   for (const item of itemsToAdd) {
@@ -31,7 +34,7 @@ async function main() {
       item.name,
       item.category,
       item.desc,
-      item.loc,
+      // DIUBAH: Menghapus 'item.loc' karena bidang lokasi sudah tidak ada di kontrak
       item.qty
     );
     await tx.wait();

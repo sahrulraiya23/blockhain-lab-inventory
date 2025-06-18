@@ -2,11 +2,9 @@ let web3;
 let contract;
 let currentAccount;
 
-
 let ADMIN_ROLE;
 let ASLAB_ROLE;
 let DEFAULT_ADMIN_ROLE;
-
 
 async function init() {
     if (typeof window.ethereum !== 'undefined') {
@@ -28,10 +26,19 @@ async function init() {
             contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
 
             // 4. Hitung hash peran menggunakan web3
+            // DEFAULT_ADMIN_ROLE tidak lagi perlu dipanggil dari kontrak jika kontrak tidak menggunakan Counters.sol
+            // Default ADMIN_ROLE for AccessControl is keccak256(0) or 0x00...00
+            // Namun, karena kontrak Anda secara eksplisit mendeklarasikan `DEFAULT_ADMIN_ROLE` sebagai `bytes32 public constant`,
+            // dan kita sebelumnya mengambilnya via `contract.methods.DEFAULT_ADMIN_ROLE().call()`,
+            // dan kontrak terakhir yang kita kerjakan masih memiliki `DEFAULT_ADMIN_ROLE` sebagai konstanta di AccessControl,
+            // kita bisa langsung menggunakan `web3.utils.keccak256("DEFAULT_ADMIN_ROLE")`
+            // atau memastikan Hardhat ABI output mencerminkan DEFAULT_ADMIN_ROLE constant.
+            // Untuk lebih akurat dengan ABI Anda, mari kita tetap menggunakan hardcoded hash jika diperlukan atau mengambilnya dari konstanta jika kontrak expose itu.
+            // Sesuai ABI yang Anda berikan, fungsi `DEFAULT_ADMIN_ROLE()` masih ada.
             ADMIN_ROLE = web3.utils.keccak256("ADMIN_ROLE");
             ASLAB_ROLE = web3.utils.keccak256("ASLAB_ROLE");
-            DEFAULT_ADMIN_ROLE = await contract.methods.DEFAULT_ADMIN_ROLE().call();
-            
+            DEFAULT_ADMIN_ROLE = await contract.methods.DEFAULT_ADMIN_ROLE().call(); // Ambil dari kontrak
+
             // 5. Tangani perubahan akun
             const accounts = await web3.eth.getAccounts();
             await handleAccountsChanged(accounts);
@@ -64,6 +71,7 @@ async function handleAccountsChanged(accounts) {
         if (activeTabName === 'borrow') loadMyBorrows();
         if (activeTabName === 'history') loadHistory();
         if (activeTabName === 'admin') loadOwnerInfo();
+        if (activeTabName === 'profile') loadProfileInfo();
     }
 }
 
@@ -124,11 +132,10 @@ async function addItem() {
     const name = document.getElementById('item-name').value;
     const category = document.getElementById('item-category').value;
     const description = document.getElementById('item-description').value;
-    const location = document.getElementById('item-location').value;
     const quantity = document.getElementById('item-quantity').value;
 
     try {
-        await contract.methods.addItem(name, category, description, location, quantity).send({ from: currentAccount });
+        await contract.methods.addItem(name, category, description, quantity).send({ from: currentAccount });
         alert('Item berhasil ditambahkan!');
         document.getElementById('add-item-form').reset();
         loadInventory();
@@ -137,6 +144,7 @@ async function addItem() {
         alert('Gagal menambahkan item. Pastikan Anda adalah admin atau aslab.');
     }
 }
+
 async function addAslab() {
     if (!currentAccount) return alert('Silakan hubungkan wallet Anda.');
 
@@ -155,7 +163,6 @@ async function addAslab() {
         alert('Gagal menambahkan aslab. Pastikan Anda adalah owner.');
     }
 }
-// ... (di akhir file app.js)
 
 async function loadProfileInfo() {
     const connectedWalletSpan = document.getElementById('profile-connected-wallet');
@@ -194,18 +201,23 @@ async function saveWalletAddress() {
     alert('Alamat wallet berhasil disimpan!');
     loadProfileInfo(); // Muat ulang info untuk menampilkan data yang baru
 }
-function openBorrowModal(itemId) {
+
+function openBorrowModal(itemId, maxAvailable) {
     if (!currentAccount) {
         alert("Silakan hubungkan wallet Anda terlebih dahulu.");
         return;
     }
     document.getElementById('borrow-item-id').value = itemId;
-    document.getElementById('borrower-name').value = currentAccount; 
+    document.getElementById('borrower-name').value = currentAccount;
+    const borrowQuantityInput = document.getElementById('borrow-quantity');
+    borrowQuantityInput.value = 1; // Default 1
+    borrowQuantityInput.max = maxAvailable; // Atur maksimum sesuai ketersediaan
     document.getElementById('borrow-modal').style.display = 'block';
 }
 
 function closeModal() {
     document.getElementById('borrow-modal').style.display = 'none';
+    document.getElementById('borrow-form').reset(); // Reset form saat modal ditutup
 }
 
 async function borrowItem() {
@@ -213,32 +225,44 @@ async function borrowItem() {
 
     const itemId = document.getElementById('borrow-item-id').value;
     const purpose = document.getElementById('borrow-purpose').value;
-    
+    const quantityToBorrow = parseInt(document.getElementById('borrow-quantity').value);
+
+    if (isNaN(quantityToBorrow) || quantityToBorrow <= 0) {
+        return alert('Jumlah yang dipinjam harus angka positif.');
+    }
+
     try {
-        // Nama peminjam sekarang diambil dari alamat wallet yang terhubung
-        await contract.methods.borrowItem(itemId, currentAccount, purpose).send({ from: currentAccount });
-        alert('Item berhasil dipinjam!');
+        await contract.methods.borrowItem(itemId, currentAccount, purpose, quantityToBorrow).send({ from: currentAccount });
+        alert(`${quantityToBorrow} item berhasil dipinjam!`);
         closeModal();
         loadInventory();
         loadMyBorrows();
-        document.getElementById('borrow-form').reset();
     } catch (error) {
         console.error('Error borrowing item:', error);
-        alert('Gagal meminjam item: ' + (error.message || error.data?.message));
+        alert('Gagal meminjam item: ' + (error.message || error.data?.message || 'Terjadi kesalahan.'));
     }
 }
 
+// DIUBAH: Fungsi returnItem untuk mengirimkan jumlah yang dikembalikan (1)
 async function returnItem(itemId) {
     if (!currentAccount) return alert('Silakan hubungkan wallet Anda.');
 
+    // Kuantitas yang akan dikembalikan, sesuai dengan tombol "Kembalikan 1"
+    const quantityToReturn = 1; 
+
+    if (!confirm(`Anda yakin ingin mengembalikan ${quantityToReturn} unit item ini?`)) {
+        return; // Batalkan jika user tidak yakin
+    }
+
     try {
-        await contract.methods.returnItem(itemId).send({ from: currentAccount });
-        alert('Item berhasil dikembalikan!');
+        // Mengirim _quantityToReturn (1) sebagai parameter kedua
+        await contract.methods.returnItem(itemId, quantityToReturn).send({ from: currentAccount }); //
+        alert(`${quantityToReturn} item berhasil dikembalikan!`);
         loadInventory();
         loadMyBorrows();
     } catch (error) {
         console.error('Error returning item:', error);
-        alert('Gagal mengembalikan item: ' + (error.message || error.data?.message));
+        alert('Gagal mengembalikan item: ' + (error.message || error.data?.message || 'Terjadi kesalahan.'));
     }
 }
 
@@ -265,10 +289,10 @@ async function displayItems(items) {
     }
     
     for (const item of items) {
-        // Cek jumlah yang dipinjam oleh user saat ini
-        const userBorrowedCount = currentAccount ? await contract.methods.userBorrowedCount(currentAccount, item.id).call() : 0;
-        
-        const itemCard = createItemCard(item, Number(userBorrowedCount));
+        const userBorrowed = currentAccount ? await contract.methods.userBorrowedCount(currentAccount, item.id).call() : 0;
+        const userBorrowedCount = Number(userBorrowed);
+
+        const itemCard = createItemCard(item, userBorrowedCount);
         container.appendChild(itemCard);
     }
 }
@@ -289,10 +313,9 @@ function createItemCard(item, userBorrowedCount) {
             </div>
         </div>
         <p><strong>Kategori:</strong> ${item.category}</p>
-        <p><strong>Lokasi:</strong> ${item.location}</p>
         <p><strong>Deskripsi:</strong> ${item.description}</p>
         <div class="item-actions">
-            <button class="btn btn-primary" onclick="openBorrowModal(${itemId})" ${availableQuantity === 0 ? 'disabled' : ''}>Pinjam</button>
+            <button class="btn btn-primary" onclick="openBorrowModal(${itemId}, ${availableQuantity})" ${availableQuantity === 0 ? 'disabled' : ''}>Pinjam</button>
             <button class="btn btn-danger" onclick="returnItem(${itemId})" ${userBorrowedCount === 0 ? 'disabled' : ''}>Kembalikan</button>
         </div>
     `;
@@ -320,7 +343,7 @@ async function loadMyBorrows() {
             card.innerHTML = `
                 <h3>${item.name}</h3>
                 <p><strong>Kategori:</strong> ${item.category}</p>
-                <p><strong>Jumlah Dipinjam:</strong> ${borrowedCounts[index]}</p>
+                <p><strong>Jumlah Dipinjam:</strong> ${Number(borrowedCounts[index])}</p>
                 <div class="item-actions">
                     <button class="btn btn-danger" onclick="returnItem(${item.id})">Kembalikan 1</button>
                 </div>
@@ -352,6 +375,7 @@ async function loadHistory() {
                         <div class="history-item">
                             <p><strong>Peminjam:</strong> ${record.borrowerName} (${formatAddress(record.borrower)})</p>
                             <p><strong>Tujuan:</strong> ${record.purpose}</p>
+                            <p><strong>Jumlah:</strong> ${Number(record.quantity)}</p>
                             <p><strong>Waktu Pinjam:</strong> ${formatDate(record.borrowTime)}</p>
                             <p><strong>Status:</strong> ${record.isReturned ? `✅ Dikembalikan pada ${formatDate(record.returnTime)}` : '⏳ Masih Dipinjam'}</p>
                         </div>
@@ -376,6 +400,8 @@ async function loadOwnerInfo() {
     if (!contract) return;
     const ownerSpan = document.getElementById('contract-owner-address');
     try {
+        // ABI yang Anda berikan menunjukkan adanya fungsi DEFAULT_ADMIN_ROLE().
+        // Ini adalah cara yang aman untuk mendapatkan peran tersebut.
         const adminRole = await contract.methods.DEFAULT_ADMIN_ROLE().call();
         const pastEvents = await contract.getPastEvents('RoleGranted', {
             filter: { role: adminRole },
@@ -421,13 +447,13 @@ function formatAddress(address) {
 
 function formatDate(timestamp) {
     if (Number(timestamp) === 0) return 'N/A';
-    return new Date(Number(timestamp) * 1000).toLocaleString('id-ID');
+    return new Date(Number(timestamp) * 1000).toLocaleString('id-ID', { timeZone: 'Asia/Makassar' }); // WITA timezone
 }
 
 // Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('connect-wallet').addEventListener('click', init);
-    document.querySelector('.close').addEventListener('click', closeModal);
+    document.querySelector('#borrow-modal .close').addEventListener('click', closeModal);
     
     document.getElementById('borrow-form').addEventListener('submit', (e) => {
         e.preventDefault();
@@ -450,6 +476,5 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('filter-category').addEventListener('change', filterItems);
     document.getElementById('show-available-only').addEventListener('change', filterItems);
 
-    // Langsung panggil init untuk memulai koneksi saat halaman dimuat
     init(); 
 });
