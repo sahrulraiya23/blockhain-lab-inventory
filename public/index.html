@@ -23,6 +23,7 @@
             <button class="tab-button active" onclick="showTab(event, 'inventory')">🔍 Inventory</button>
             <button class="tab-button" onclick="showTab(event, 'borrow')">🎒 Peminjaman</button>
             <button class="tab-button" onclick="showTab(event, 'history')">📜 History</button>
+            <button class="tab-button" id="profile-tab-button" onclick="showTab(event, 'profile')">👤 Profil</button>
             <button class="tab-button" id="admin-tab-button" onclick="showTab(event, 'admin')">🔑 Admin</button>
         </nav>
 
@@ -53,9 +54,34 @@
             <div id="history-container"></div>
         </div>
 
+        <div id="profile" class="tab-content">
+            <h2>Profil Pengguna</h2>
+            <div class="profile-section">
+                <h3>Informasi Wallet Anda</h3>
+                <div class="profile-info-item">
+                    <strong>Wallet Terhubung:</strong>
+                    <span id="profile-connected-wallet" class="loading">Belum terhubung</span>
+                </div>
+                <div class="profile-info-item">
+                    <strong>Alamat Tersimpan:</strong>
+                    <span id="profile-saved-wallet" class="loading">Belum ada</span>
+                </div>
+            </div>
+            <div class="profile-section">
+                <h3>Simpan Alamat Wallet</h3>
+                <p>Anda bisa menyimpan alamat wallet lain di sini untuk referensi.</p>
+                <form id="profile-form">
+                    <div class="form-group">
+                        <label for="wallet-address-input">Alamat Wallet</label>
+                        <input type="text" id="wallet-address-input" class="form-control" placeholder="0x..." required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Simpan Alamat</button>
+                </form>
+            </div>
+        </div>
+
         <div id="admin" class="tab-content">
             <h2>🛠️ Admin Panel</h2>
-
             <div class="owner-info">
                 <p>
                     <strong>🔐 Alamat Owner Kontrak</strong>
@@ -65,7 +91,6 @@
             </div>
 
             <div class="admin-sections">
-                <!-- Tambah Item Section -->
                 <div class="admin-section">
                     <h3>
                         <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
@@ -73,14 +98,6 @@
                         </svg>
                         Tambah Item Baru
                     </h3>
-
-                    <div class="alert alert-success" id="add-item-success">
-                        ✅ Item berhasil ditambahkan ke inventaris!
-                    </div>
-                    <div class="alert alert-error" id="add-item-error">
-                        ❌ Gagal menambahkan item. Silakan coba lagi.
-                    </div>
-
                     <form id="add-item-form">
                         <div class="form-row">
                             <div class="form-group">
@@ -94,7 +111,6 @@
                                     placeholder="Masukkan kategori" required>
                             </div>
                         </div>
-
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="item-quantity">🔢 Jumlah</label>
@@ -107,24 +123,14 @@
                                     required>
                             </div>
                         </div>
-
                         <div class="form-group">
                             <label for="item-description">📝 Deskripsi</label>
                             <textarea id="item-description" class="form-control" placeholder="Masukkan deskripsi item"
                                 required></textarea>
                         </div>
-
-                        <button type="submit" class="btn btn-primary">
-                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor"
-                                style="display: inline; margin: 0; width: 16px; height: 16px;">
-                                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
-                            </svg>
-                            Tambah Item
-                        </button>
+                        <button type="submit" class="btn btn-primary">Tambah Item</button>
                     </form>
                 </div>
-
-                <!-- Tambah Aslab Section -->
                 <div class="admin-section">
                     <h3>
                         <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
@@ -133,31 +139,13 @@
                         </svg>
                         Tambah Aslab Baru
                     </h3>
-
-                    <div class="alert alert-success" id="add-aslab-success">
-                        ✅ Asisten Lab berhasil ditambahkan!
-                    </div>
-                    <div class="alert alert-error" id="add-aslab-error">
-                        ❌ Gagal menambahkan Asisten Lab. Periksa alamat wallet.
-                    </div>
-
                     <form id="add-aslab-form">
                         <div class="form-group">
                             <label for="aslab-address">🔐 Alamat Wallet Aslab</label>
                             <input type="text" id="aslab-address" class="form-control" placeholder="0x..." required
                                 pattern="^0x[a-fA-F0-9]{40}$">
-                            <small style="color: #6c757d; font-size: 0.875rem; margin-top: 4px; display: block;">
-                                💡 Pastikan alamat wallet dimulai dengan "0x" dan memiliki 42 karakter
-                            </small>
                         </div>
-
-                        <button type="submit" class="btn btn-success">
-                            <svg class="icon" viewBox="0 0 24 24" fill="currentColor"
-                                style="display: inline; margin: 0; width: 16px; height: 16px;">
-                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-                            </svg>
-                            Tambah Aslab
-                        </button>
+                        <button type="submit" class="btn btn-success">Tambah Aslab</button>
                     </form>
                 </div>
             </div>

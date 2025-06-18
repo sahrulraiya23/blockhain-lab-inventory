@@ -115,6 +115,7 @@ function showTab(event, tabName) {
     if (tabName === 'borrow') loadMyBorrows();
     if (tabName === 'history') loadHistory();
     if (tabName === 'admin') loadOwnerInfo();
+    if (tabName === 'profile') loadProfileInfo(); 
 }
 
 async function addItem() {
@@ -154,7 +155,45 @@ async function addAslab() {
         alert('Gagal menambahkan aslab. Pastikan Anda adalah owner.');
     }
 }
+// ... (di akhir file app.js)
 
+async function loadProfileInfo() {
+    const connectedWalletSpan = document.getElementById('profile-connected-wallet');
+    const savedWalletSpan = document.getElementById('profile-saved-wallet');
+    const walletInput = document.getElementById('wallet-address-input');
+
+    if (currentAccount) {
+        connectedWalletSpan.textContent = currentAccount;
+        connectedWalletSpan.classList.remove('loading');
+    } else {
+        connectedWalletSpan.textContent = 'Belum terhubung';
+        connectedWalletSpan.classList.add('loading');
+    }
+
+    const savedWallet = localStorage.getItem('savedWallet');
+    if (savedWallet) {
+        savedWalletSpan.textContent = savedWallet;
+        savedWalletSpan.classList.remove('loading');
+        walletInput.value = savedWallet;
+    } else {
+        savedWalletSpan.textContent = 'Belum ada alamat tersimpan';
+        savedWalletSpan.classList.add('loading');
+    }
+}
+
+async function saveWalletAddress() {
+    const walletInput = document.getElementById('wallet-address-input');
+    const addressToSave = walletInput.value;
+
+    if (!web3.utils.isAddress(addressToSave)) {
+        alert('Alamat wallet tidak valid. Mohon periksa kembali.');
+        return;
+    }
+
+    localStorage.setItem('savedWallet', addressToSave);
+    alert('Alamat wallet berhasil disimpan!');
+    loadProfileInfo(); // Muat ulang info untuk menampilkan data yang baru
+}
 function openBorrowModal(itemId) {
     if (!currentAccount) {
         alert("Silakan hubungkan wallet Anda terlebih dahulu.");
@@ -393,6 +432,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('borrow-form').addEventListener('submit', (e) => {
         e.preventDefault();
         borrowItem();
+    });
+    document.getElementById('profile-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        saveWalletAddress();
     });
     
     document.getElementById('add-item-form').addEventListener('submit', (e) => {
