@@ -23,7 +23,6 @@
             <button class="tab-button active" onclick="showTab(event, 'inventory')">🔍 Inventory</button>
             <button class="tab-button" onclick="showTab(event, 'borrow')">🎒 Peminjaman</button>
             <button class="tab-button" onclick="showTab(event, 'history')">📜 History</button>
-            <button class="tab-button" id="profile-tab-button" onclick="showTab(event, 'profile')">👤 Profil</button>
             <button class="tab-button" id="admin-tab-button" onclick="showTab(event, 'admin')">🔑 Admin</button>
         </nav>
 
@@ -53,32 +52,6 @@
         <div id="history" class="tab-content">
             <h2>History Peminjaman</h2>
             <div id="history-container"></div>
-        </div>
-
-        <div id="profile" class="tab-content">
-            <h2>Profil Pengguna</h2>
-            <div class="profile-section">
-                <h3>Informasi Wallet Anda</h3>
-                <div class="profile-info-item">
-                    <strong>Wallet Terhubung:</strong>
-                    <span id="profile-connected-wallet" class="loading">Belum terhubung</span>
-                </div>
-                <div class="profile-info-item">
-                    <strong>Alamat Tersimpan:</strong>
-                    <span id="profile-saved-wallet" class="loading">Belum ada</span>
-                </div>
-            </div>
-            <div class="profile-section">
-                <h3>Simpan Alamat Wallet</h3>
-                <p>Anda bisa menyimpan alamat wallet lain di sini untuk referensi.</p>
-                <form id="profile-form">
-                    <div class="form-group">
-                        <label for="wallet-address-input">Alamat Wallet</label>
-                        <input type="text" id="wallet-address-input" class="form-control" placeholder="0x..." required>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Simpan Alamat</button>
-                </form>
-            </div>
         </div>
 
         <div id="admin" class="tab-content">

@@ -26,15 +26,6 @@ async function init() {
             contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
 
             // 4. Hitung hash peran menggunakan web3
-            // DEFAULT_ADMIN_ROLE tidak lagi perlu dipanggil dari kontrak jika kontrak tidak menggunakan Counters.sol
-            // Default ADMIN_ROLE for AccessControl is keccak256(0) or 0x00...00
-            // Namun, karena kontrak Anda secara eksplisit mendeklarasikan `DEFAULT_ADMIN_ROLE` sebagai `bytes32 public constant`,
-            // dan kita sebelumnya mengambilnya via `contract.methods.DEFAULT_ADMIN_ROLE().call()`,
-            // dan kontrak terakhir yang kita kerjakan masih memiliki `DEFAULT_ADMIN_ROLE` sebagai konstanta di AccessControl,
-            // kita bisa langsung menggunakan `web3.utils.keccak256("DEFAULT_ADMIN_ROLE")`
-            // atau memastikan Hardhat ABI output mencerminkan DEFAULT_ADMIN_ROLE constant.
-            // Untuk lebih akurat dengan ABI Anda, mari kita tetap menggunakan hardcoded hash jika diperlukan atau mengambilnya dari konstanta jika kontrak expose itu.
-            // Sesuai ABI yang Anda berikan, fungsi `DEFAULT_ADMIN_ROLE()` masih ada.
             ADMIN_ROLE = web3.utils.keccak256("ADMIN_ROLE");
             ASLAB_ROLE = web3.utils.keccak256("ASLAB_ROLE");
             DEFAULT_ADMIN_ROLE = await contract.methods.DEFAULT_ADMIN_ROLE().call(); // Ambil dari kontrak
@@ -71,10 +62,25 @@ async function handleAccountsChanged(accounts) {
         if (activeTabName === 'borrow') loadMyBorrows();
         if (activeTabName === 'history') loadHistory();
         if (activeTabName === 'admin') loadOwnerInfo();
-        if (activeTabName === 'profile') loadProfileInfo();
+        // HAPUS BARIS INI: if (activeTabName === 'profile') loadProfileInfo();
     }
 }
 
+// ... (kode yang sudah ada)
+
+function showTab(event, tabName) {
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.tab-button').forEach(button => button.classList.remove('active'));
+    
+    document.getElementById(tabName).classList.add('active');
+    event.currentTarget.classList.add('active');
+    
+    if (tabName === 'inventory') loadInventory();
+    if (tabName === 'borrow') loadMyBorrows();
+    if (tabName === 'history') loadHistory();
+    if (tabName === 'admin') loadOwnerInfo();
+    // HAPUS BARIS INI: if (tabName === 'profile') loadProfileInfo();
+}
 function updateWalletUI() {
     const connectButton = document.getElementById('connect-wallet');
     const accountAddress = document.getElementById('account-address');
@@ -92,23 +98,52 @@ function updateWalletUI() {
 
 async function updateAdminTabVisibility() {
     const adminTabButton = document.getElementById('admin-tab-button');
+    const addAslabSection = document.getElementById('add-aslab-form').closest('.admin-section'); // Ambil elemen section 'Tambah Aslab Baru'
+    const addItemSection = document.getElementById('add-item-form').closest('.admin-section'); // Ambil elemen section 'Tambah Item Baru'
+
     if (!currentAccount || !contract) {
         adminTabButton.style.display = 'none';
+        if (addAslabSection) addAslabSection.style.display = 'none';
+        if (addItemSection) addItemSection.style.display = 'none';
         return;
     }
 
     try {
         const isAslab = await contract.methods.hasRole(ASLAB_ROLE, currentAccount).call();
-        const isAdmin = await contract.methods.hasRole(ADMIN_ROLE, currentAccount).call();
+        const isAdmin = await contract.methods.hasRole(ADMIN_ROLE, currentAccount).call(); // ADMIN_ROLE yang Anda definisikan adalah keccak256("ADMIN_ROLE")
+        const isDefaultAdmin = await contract.methods.hasRole(DEFAULT_ADMIN_ROLE, currentAccount).call(); // DEFAULT_ADMIN_ROLE dari kontrak
 
-        if (isAslab || isAdmin) {
+        if (isAslab || isDefaultAdmin) { // Tampilkan tab Admin jika Aslab atau Default Admin
             adminTabButton.style.display = 'flex';
         } else {
             adminTabButton.style.display = 'none';
         }
+
+        // Logika untuk menampilkan/menyembunyikan bagian "Tambah Aslab Baru"
+        if (addAslabSection) {
+            if (isDefaultAdmin) { // Hanya Default Admin yang bisa melihat form Add Aslab
+                addAslabSection.style.display = 'block';
+            } else {
+                addAslabSection.style.display = 'none';
+            }
+        }
+
+        // Logika untuk menampilkan/menyembunyikan bagian "Tambah Item Baru"
+        // Aslab dan Default Admin harus bisa melihat form Add Item
+        if (addItemSection) {
+            if (isAslab || isDefaultAdmin) {
+                addItemSection.style.display = 'block';
+            } else {
+                addItemSection.style.display = 'none';
+            }
+        }
+
+
     } catch (error) {
         console.error("Error checking role:", error);
         adminTabButton.style.display = 'none';
+        if (addAslabSection) addAslabSection.style.display = 'none';
+        if (addItemSection) addItemSection.style.display = 'none';
     }
 }
 
@@ -186,20 +221,6 @@ async function loadProfileInfo() {
         savedWalletSpan.textContent = 'Belum ada alamat tersimpan';
         savedWalletSpan.classList.add('loading');
     }
-}
-
-async function saveWalletAddress() {
-    const walletInput = document.getElementById('wallet-address-input');
-    const addressToSave = walletInput.value;
-
-    if (!web3.utils.isAddress(addressToSave)) {
-        alert('Alamat wallet tidak valid. Mohon periksa kembali.');
-        return;
-    }
-
-    localStorage.setItem('savedWallet', addressToSave);
-    alert('Alamat wallet berhasil disimpan!');
-    loadProfileInfo(); // Muat ulang info untuk menampilkan data yang baru
 }
 
 function openBorrowModal(itemId, maxAvailable) {
@@ -355,33 +376,81 @@ async function loadMyBorrows() {
         container.innerHTML = '<div class="empty-state">Gagal memuat data peminjaman.</div>';
     }
 }
-
 async function loadHistory() {
     if (!contract) return;
     const container = document.getElementById('history-container');
-    container.innerHTML = '<div class="loading">Loading history...</div>';
+    container.innerHTML = '<div class="loading">Loading history...</div>'; // Tampilkan loading state
     try {
         const items = await contract.methods.getAllItems().call();
         let hasHistory = false;
         let allHistoryHtml = '';
 
         for (const item of items) {
-            const history = await contract.methods.getItemBorrowHistory(item.id).call();
-            if (history.length > 0) {
+            const itemHistory = await contract.methods.getItemBorrowHistory(item.id).call();
+            
+            if (itemHistory.length > 0) {
                 hasHistory = true;
-                let historyHTML = `<h3>Riwayat untuk: ${item.name}</h3>`;
-                history.slice().reverse().forEach(record => {
-                    historyHTML += `
-                        <div class="history-item">
-                            <p><strong>Peminjam:</strong> ${record.borrowerName} (${formatAddress(record.borrower)})</p>
-                            <p><strong>Tujuan:</strong> ${record.purpose}</p>
-                            <p><strong>Jumlah:</strong> ${Number(record.quantity)}</p>
-                            <p><strong>Waktu Pinjam:</strong> ${formatDate(record.borrowTime)}</p>
-                            <p><strong>Status:</strong> ${record.isReturned ? `✅ Dikembalikan pada ${formatDate(record.returnTime)}` : '⏳ Masih Dipinjam'}</p>
+                let itemHistoryGrouped = {};
+
+                // Mengelompokkan riwayat berdasarkan sesi peminjaman (borrower + purpose + borrowTime)
+                itemHistory.forEach(record => {
+                    const key = `${record.borrower}-${record.purpose}-${record.borrowTime}`;
+                    if (!itemHistoryGrouped[key]) {
+                        itemHistoryGrouped[key] = {
+                            item: item, // Simpan detail item
+                            borrower: record.borrower,
+                            borrowerName: record.borrowerName, // Pastikan ini tersedia atau gunakan formatAddress
+                            purpose: record.purpose,
+                            borrowTime: Number(record.borrowTime),
+                            initialQuantity: Number(record.quantity), // Quantity saat dipinjam
+                            returnedQuantity: 0,
+                            records: [] // Untuk menyimpan semua event terkait sesi ini (pinjam & kembali)
+                        };
+                    }
+                    itemHistoryGrouped[key].records.push(record);
+                    
+                    // Jika ini adalah event pengembalian, tambahkan ke total returnedQuantity untuk sesi ini
+                    if (record.isReturned && Number(record.returnedQuantity) > 0) {
+                        itemHistoryGrouped[key].returnedQuantity += Number(record.returnedQuantity);
+                    }
+                });
+
+                // Urutkan berdasarkan waktu peminjaman terbaru dulu
+                const sortedSessions = Object.values(itemHistoryGrouped).sort((a, b) => b.borrowTime - a.borrowTime);
+
+                let itemHtmlForHistory = `<h3>Riwayat untuk: ${item.name}</h3>`;
+                
+                sortedSessions.forEach(session => {
+                    const remainingBorrowed = session.initialQuantity - session.returnedQuantity;
+                    const isFullyReturned = remainingBorrowed === 0;
+
+                    itemHtmlForHistory += `
+                        <div class="history-record-group ${isFullyReturned ? 'fully-returned' : 'still-borrowed'}">
+                            <p><strong>Peminjam:</strong> ${session.borrowerName} (${formatAddress(session.borrower)})</p>
+                            <p><strong>Tujuan:</strong> ${session.purpose}</p>
+                            <p><strong>Jumlah Dipinjam Awal:</strong> ${session.initialQuantity}</p>
+                            <p><strong>Waktu Pinjam:</strong> ${formatDate(session.borrowTime)}</p>
+                            <p><strong>Status:</strong> 
+                                ${isFullyReturned ? `✅ Dikembalikan Penuh` : `⏳ Masih Dipinjam (${remainingBorrowed} tersisa)`}
+                            </p>
+                            ${isFullyReturned && session.records.some(r => r.isReturned && Number(r.returnTime) > 0) ? 
+                                `<p><strong>Waktu Pengembalian Terakhir:</strong> ${formatDate(Math.max(...session.records.filter(r => r.isReturned).map(r => Number(r.returnTime))))}</p>` : ''
+                            }
+                            <div class="sub-history">
+                                <h4>Detail Transaksi:</h4>
+                                ${session.records.sort((a, b) => Number(a.borrowTime) - Number(b.borrowTime)).map(subRecord => `
+                                    <p class="sub-history-item">
+                                        ${Number(subRecord.returnedQuantity) > 0 ? 
+                                            `&bull; Dikembalikan: ${Number(subRecord.returnedQuantity)} pada ${formatDate(subRecord.returnTime)}` :
+                                            `&bull; Dipinjam: ${Number(subRecord.quantity)} pada ${formatDate(subRecord.borrowTime)}`
+                                        }
+                                    </p>
+                                `).join('')}
+                            </div>
                         </div>
                     `;
                 });
-                allHistoryHtml += `<div class="history-card">${historyHTML}</div>`;
+                allHistoryHtml += `<div class="history-card">${itemHtmlForHistory}</div>`;
             }
         }
         
@@ -396,12 +465,11 @@ async function loadHistory() {
     }
 }
 
+
 async function loadOwnerInfo() {
     if (!contract) return;
     const ownerSpan = document.getElementById('contract-owner-address');
     try {
-        // ABI yang Anda berikan menunjukkan adanya fungsi DEFAULT_ADMIN_ROLE().
-        // Ini adalah cara yang aman untuk mendapatkan peran tersebut.
         const adminRole = await contract.methods.DEFAULT_ADMIN_ROLE().call();
         const pastEvents = await contract.getPastEvents('RoleGranted', {
             filter: { role: adminRole },
@@ -454,17 +522,11 @@ function formatDate(timestamp) {
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('connect-wallet').addEventListener('click', init);
     document.querySelector('#borrow-modal .close').addEventListener('click', closeModal);
-    
-    document.getElementById('borrow-form').addEventListener('submit', (e) => {
+        document.getElementById('borrow-form').addEventListener('submit', (e) => {
         e.preventDefault();
         borrowItem();
     });
-    document.getElementById('profile-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        saveWalletAddress();
-    });
-    
-    document.getElementById('add-item-form').addEventListener('submit', (e) => {
+        document.getElementById('add-item-form').addEventListener('submit', (e) => {
         e.preventDefault();
         addItem();
     });
