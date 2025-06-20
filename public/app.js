@@ -66,7 +66,6 @@ async function handleAccountsChanged(accounts) {
     }
 }
 
-// ... (kode yang sudah ada)
 
 function showTab(event, tabName) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
@@ -79,7 +78,6 @@ function showTab(event, tabName) {
     if (tabName === 'borrow') loadMyBorrows();
     if (tabName === 'history') loadHistory();
     if (tabName === 'admin') loadOwnerInfo();
-    // HAPUS BARIS INI: if (tabName === 'profile') loadProfileInfo();
 }
 function updateWalletUI() {
     const connectButton = document.getElementById('connect-wallet');
@@ -376,6 +374,10 @@ async function loadMyBorrows() {
         container.innerHTML = '<div class="empty-state">Gagal memuat data peminjaman.</div>';
     }
 }
+// public/app.js
+
+// ... (kode yang sudah ada sebelumnya) ...
+
 async function loadHistory() {
     if (!contract) return;
     const container = document.getElementById('history-container');
@@ -394,24 +396,32 @@ async function loadHistory() {
 
                 // Mengelompokkan riwayat berdasarkan sesi peminjaman (borrower + purpose + borrowTime)
                 itemHistory.forEach(record => {
-                    const key = `${record.borrower}-${record.purpose}-${record.borrowTime}`;
-                    if (!itemHistoryGrouped[key]) {
-                        itemHistoryGrouped[key] = {
+                    // Gunakan recordId yang unik untuk setiap entri history sebagai bagian dari kunci grup
+                    // Ini memastikan bahwa setiap transaksi borrow/return tercatat secara individual
+                    const sessionKey = `${record.borrower}-${record.purpose}-${record.borrowTime}`;
+
+                    if (!itemHistoryGrouped[sessionKey]) {
+                        itemHistoryGrouped[sessionKey] = {
                             item: item, // Simpan detail item
                             borrower: record.borrower,
                             borrowerName: record.borrowerName, // Pastikan ini tersedia atau gunakan formatAddress
                             purpose: record.purpose,
                             borrowTime: Number(record.borrowTime),
-                            initialQuantity: Number(record.quantity), // Quantity saat dipinjam
+                            initialQuantity: 0, // Akan diisi dari record peminjaman pertama di sesi ini
                             returnedQuantity: 0,
                             records: [] // Untuk menyimpan semua event terkait sesi ini (pinjam & kembali)
                         };
                     }
-                    itemHistoryGrouped[key].records.push(record);
-                    
-                    // Jika ini adalah event pengembalian, tambahkan ke total returnedQuantity untuk sesi ini
-                    if (record.isReturned && Number(record.returnedQuantity) > 0) {
-                        itemHistoryGrouped[key].returnedQuantity += Number(record.returnedQuantity);
+
+                    // Tambahkan record ke sesi yang sesuai
+                    itemHistoryGrouped[sessionKey].records.push(record);
+
+                    // Update initialQuantity jika ini adalah record peminjaman
+                    if (!record.isReturned) {
+                         itemHistoryGrouped[sessionKey].initialQuantity += Number(record.quantity);
+                    } else {
+                        // Jika ini adalah event pengembalian, tambahkan ke total returnedQuantity untuk sesi ini
+                        itemHistoryGrouped[sessionKey].returnedQuantity += Number(record.returnedQuantity);
                     }
                 });
 
@@ -441,8 +451,8 @@ async function loadHistory() {
                                 ${session.records.sort((a, b) => Number(a.borrowTime) - Number(b.borrowTime)).map(subRecord => `
                                     <p class="sub-history-item">
                                         ${Number(subRecord.returnedQuantity) > 0 ? 
-                                            `&bull; Dikembalikan: ${Number(subRecord.returnedQuantity)} pada ${formatDate(subRecord.returnTime)}` :
-                                            `&bull; Dipinjam: ${Number(subRecord.quantity)} pada ${formatDate(subRecord.borrowTime)}`
+                                            `&bull; Dikembalikan: ${Number(subRecord.returnedQuantity)} unit pada ${formatDate(subRecord.returnTime)}` :
+                                            `&bull; Dipinjam: ${Number(subRecord.quantity)} unit pada ${formatDate(subRecord.borrowTime)}`
                                         }
                                     </p>
                                 `).join('')}
@@ -464,7 +474,6 @@ async function loadHistory() {
         container.innerHTML = '<div class="empty-state">Gagal memuat histori.</div>';
     }
 }
-
 
 async function loadOwnerInfo() {
     if (!contract) return;
@@ -495,15 +504,15 @@ async function filterItems() {
     const availableOnly = document.getElementById('show-available-only').checked;
     
     try {
-        const allItems = await contract.methods.getAllItems().call();
+        const allItems = await contract.methods.getAllItems().call(); // Memanggil semua item dari kontrak
         const filtered = allItems.filter(item => {
-            const matchesSearch = item.name.toLowerCase().includes(searchTerm) ||
-                                item.description.toLowerCase().includes(searchTerm);
-            const matchesCategory = !selectedCategory || item.category === selectedCategory;
-            const matchesAvailable = !availableOnly || Number(item.availableQuantity) > 0;
-            return matchesSearch && matchesCategory && matchesAvailable;
+            const matchesSearch = item.name.toLowerCase().includes(searchTerm) || // Mencocokkan nama dengan istilah pencarian
+                                item.description.toLowerCase().includes(searchTerm); // Mencocokkan deskripsi dengan istilah pencarian
+            const matchesCategory = !selectedCategory || item.category === selectedCategory; // Mencocokkan kategori
+            const matchesAvailable = !availableOnly || Number(item.availableQuantity) > 0; // Mencocokkan ketersediaan
+            return matchesSearch && matchesCategory && matchesAvailable; // Menggabungkan semua kondisi
         });
-        await displayItems(filtered);
+        await displayItems(filtered); // Menampilkan item yang sudah difilter
     } catch (error) {
         console.error('Error filtering items:', error);
     }
