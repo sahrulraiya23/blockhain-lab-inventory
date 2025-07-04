@@ -126,11 +126,18 @@
             <h3>Pinjam Item</h3>
             <form id="borrow-form">
                 <input type="hidden" id="borrow-item-id">
+
                 <div class="form-group">
-                    <label for="borrower-name">Nama Peminjam (Alamat Wallet)</label>
-                    <input type="text" id="borrower-name" placeholder="Nama Peminjam (Alamat Wallet)" required disabled
+                    <label for="borrower-wallet">Alamat Wallet Peminjam</label>
+                    <input type="text" id="borrower-wallet" required disabled class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label for="borrower-name">Nama Peminjam</label>
+                    <input type="text" id="borrower-name" placeholder="Masukkan nama lengkap Anda" required
                         class="form-control">
                 </div>
+
                 <div class="form-group">
                     <label for="borrow-quantity">Jumlah yang Dipinjam</label>
                     <input type="number" id="borrow-quantity" placeholder="Jumlah" required min="1"

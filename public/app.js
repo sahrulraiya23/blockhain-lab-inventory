@@ -227,7 +227,8 @@ function openBorrowModal(itemId, maxAvailable) {
         return;
     }
     document.getElementById('borrow-item-id').value = itemId;
-    document.getElementById('borrower-name').value = currentAccount;
+    // Mengisi alamat wallet di input yang baru
+    document.getElementById('borrower-wallet').value = currentAccount; 
     const borrowQuantityInput = document.getElementById('borrow-quantity');
     borrowQuantityInput.value = 1; // Default 1
     borrowQuantityInput.max = maxAvailable; // Atur maksimum sesuai ketersediaan
@@ -243,15 +244,21 @@ async function borrowItem() {
     if (!currentAccount) return alert('Silakan hubungkan wallet Anda.');
 
     const itemId = document.getElementById('borrow-item-id').value;
+    const borrowerName = document.getElementById('borrower-name').value; // Mengambil dari input nama
     const purpose = document.getElementById('borrow-purpose').value;
     const quantityToBorrow = parseInt(document.getElementById('borrow-quantity').value);
+
+    if (!borrowerName.trim()) {
+        return alert('Nama peminjam tidak boleh kosong.');
+    }
 
     if (isNaN(quantityToBorrow) || quantityToBorrow <= 0) {
         return alert('Jumlah yang dipinjam harus angka positif.');
     }
 
     try {
-        await contract.methods.borrowItem(itemId, currentAccount, purpose, quantityToBorrow).send({ from: currentAccount });
+        // Mengirim `borrowerName` sebagai parameter kedua ke smart contract
+        await contract.methods.borrowItem(itemId, borrowerName, purpose, quantityToBorrow).send({ from: currentAccount });
         alert(`${quantityToBorrow} item berhasil dipinjam!`);
         closeModal();
         loadInventory();
@@ -344,39 +351,88 @@ function createItemCard(item, userBorrowedCount) {
 async function loadMyBorrows() {
     if (!currentAccount || !contract) return;
     const container = document.getElementById('my-borrows-container');
-    container.innerHTML = '<div class="loading">Loading...</div>';
+    container.innerHTML = '<div class="loading">Memuat data peminjaman Anda...</div>';
+
     try {
+        // 1. Dapatkan daftar item yang pernah dipinjam oleh user saat ini
         const result = await contract.methods.getUserBorrowedItems(currentAccount).call();
         const borrowedItems = result[0];
-        const borrowedCounts = result[1];
 
         if (borrowedItems.length === 0) {
-            container.innerHTML = '<div class="empty-state">Anda tidak memiliki item yang dipinjam</div>';
+            container.innerHTML = '<div class="empty-state">Anda tidak memiliki item yang sedang dipinjam.</div>';
             return;
         }
-        
-        container.innerHTML = ''; // Clear loading
-        borrowedItems.forEach((item, index) => {
-            const card = document.createElement('div');
-            card.className = 'item-card';
-            card.innerHTML = `
-                <h3>${item.name}</h3>
-                <p><strong>Kategori:</strong> ${item.category}</p>
-                <p><strong>Jumlah Dipinjam:</strong> ${Number(borrowedCounts[index])}</p>
-                <div class="item-actions">
-                    <button class="btn btn-danger" onclick="returnItem(${item.id})">Kembalikan 1</button>
-                </div>
-            `;
-            container.appendChild(card);
-        });
+
+        let activeBorrowsHtml = '';
+        let hasActiveBorrows = false;
+
+        // 2. Untuk setiap item, kita akan periksa riwayat peminjamannya
+        for (const item of borrowedItems) {
+            const itemHistory = await contract.methods.getItemBorrowHistory(item.id).call();
+            
+            // Filter hanya riwayat milik user yang sedang login
+            const userHistory = itemHistory.filter(record => record.borrower.toLowerCase() === currentAccount.toLowerCase());
+
+            let sessions = {};
+
+            // 3. Kelompokkan transaksi menjadi "sesi" peminjaman berdasarkan tujuan dan waktu
+            userHistory.forEach(record => {
+                // Kunci unik untuk setiap sesi peminjaman
+                const sessionKey = `${record.borrower}-${record.purpose}-${record.borrowTime}`;
+                if (!sessions[sessionKey]) {
+                    sessions[sessionKey] = {
+                        item: item,
+                        borrowerName: record.borrowerName,
+                        purpose: record.purpose,
+                        borrowTime: Number(record.borrowTime),
+                        borrowedQty: 0,
+                        returnedQty: 0,
+                    };
+                }
+                // Akumulasi jumlah pinjam dan kembali
+                if (!record.isReturned) {
+                    sessions[sessionKey].borrowedQty += Number(record.quantity);
+                } else {
+                    sessions[sessionKey].returnedQty += Number(record.returnedQuantity);
+                }
+            });
+
+            // 4. Tampilkan kartu hanya untuk sesi yang itemnya belum kembali semua
+            for (const key in sessions) {
+                const session = sessions[key];
+                const stillBorrowed = session.borrowedQty - session.returnedQty;
+
+                if (stillBorrowed > 0) {
+                    hasActiveBorrows = true;
+                    // Membuat HTML Card dengan detail lengkap
+                    activeBorrowsHtml += `
+                        <div class="item-card">
+                            <h3>${session.item.name}</h3>
+                            <p><strong>Nama Peminjam:</strong> ${session.borrowerName}</p>
+                            <p><strong>Kategori:</strong> ${session.item.category}</p>
+                            <p><strong>Tujuan:</strong> ${session.purpose}</p>
+                            <p><strong>Tanggal Pinjam:</strong> ${formatDate(session.borrowTime)}</p>
+                            <p><strong>Jumlah Dipinjam:</strong> ${stillBorrowed}</p>
+                            <div class="item-actions">
+                                <button class="btn btn-danger" onclick="returnItem(${session.item.id})">Kembalikan 1</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        if (!hasActiveBorrows) {
+            container.innerHTML = '<div class="empty-state">Anda tidak memiliki item yang sedang dipinjam.</div>';
+        } else {
+            container.innerHTML = activeBorrowsHtml;
+        }
+
     } catch (error) {
         console.error('Error loading my borrows:', error);
         container.innerHTML = '<div class="empty-state">Gagal memuat data peminjaman.</div>';
     }
 }
-// public/app.js
-
-// ... (kode yang sudah ada sebelumnya) ...
 
 async function loadHistory() {
     if (!contract) return;
